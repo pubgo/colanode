@@ -103,84 +103,22 @@ export class FileDownloadJobHandler implements JobHandler<FileDownloadInput> {
       };
     }
 
-    if (!account.server.isAvailable) {
-      return {
-        type: 'retry',
-        delay: ms('5 seconds'),
-      };
+    const localFile = await this.fetchLocalFile(workspace, file.id);
+    if (localFile) {
+      return this.performLocalDownload(workspace, download, localFile);
     }
 
-    return this.performDownload(workspace, download, file);
-  }
+    await this.updateDownload(workspace, download.id, {
+      status: DownloadStatus.Failed,
+      completed_at: new Date().toISOString(),
+      progress: 0,
+      error_code: 'remote_download_disabled',
+      error_message: 'Remote file download has been disabled in local mode',
+    });
 
-  private async performDownload(
-    workspace: WorkspaceService,
-    download: SelectDownload,
-    file: LocalFileNode
-  ): Promise<JobOutput> {
-    try {
-      await this.updateDownload(workspace, download.id, {
-        status: DownloadStatus.Downloading,
-        started_at: new Date().toISOString(),
-      });
-
-      const response = await workspace.account.client.get(
-        `v1/workspaces/${workspace.workspaceId}/files/${file.id}`,
-        {
-          onDownloadProgress: async (progress, _chunk) => {
-            const percentage = Math.round((progress.percent || 0) * 100);
-            await this.updateDownload(workspace, download.id, {
-              progress: percentage,
-            });
-          },
-        }
-      );
-
-      const writeStream = await this.app.fs.writeStream(download.path);
-      await response.body?.pipeTo(writeStream);
-
-      await this.updateDownload(workspace, download.id, {
-        status: DownloadStatus.Completed,
-        completed_at: new Date().toISOString(),
-        progress: 100,
-        error_code: null,
-        error_message: null,
-      });
-
-      return {
-        type: 'success',
-      };
-    } catch {
-      const newRetries = download.retries + 1;
-
-      if (newRetries >= DOWNLOAD_RETRIES_LIMIT) {
-        await this.updateDownload(workspace, download.id, {
-          status: DownloadStatus.Failed,
-          completed_at: new Date().toISOString(),
-          progress: 0,
-          error_code: 'file_download_failed',
-          error_message:
-            'Failed to download file after ' + newRetries + ' retries',
-        });
-
-        return {
-          type: 'cancel',
-        };
-      }
-
-      await this.updateDownload(workspace, download.id, {
-        status: DownloadStatus.Pending,
-        retries: newRetries,
-        started_at: new Date().toISOString(),
-        error_code: null,
-        error_message: null,
-      });
-
-      return {
-        type: 'retry',
-        delay: ms('1 minute'),
-      };
-    }
+    return {
+      type: 'cancel',
+    };
   }
 
   private async performLocalDownload(

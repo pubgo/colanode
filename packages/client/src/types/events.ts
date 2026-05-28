@@ -20,7 +20,6 @@ import {
 } from '@colanode/client/types/nodes';
 import { User } from '@colanode/client/types/users';
 import { Workspace } from '@colanode/client/types/workspaces';
-import { Message } from '@colanode/core';
 
 export type WorkspaceEventData = {
   workspaceId: string;
@@ -170,22 +169,6 @@ export type CollaborationDeletedEvent = {
   nodeId: string;
 };
 
-export type AccountConnectionOpenedEvent = {
-  type: 'account.connection.opened';
-  accountId: string;
-};
-
-export type AccountConnectionClosedEvent = {
-  type: 'account.connection.closed';
-  accountId: string;
-};
-
-export type AccountConnectionMessageReceivedEvent = {
-  type: 'account.connection.message.received';
-  accountId: string;
-  message: Message;
-};
-
 export type MetadataUpdatedEvent = {
   type: 'metadata.updated';
   metadata: Metadata;
@@ -312,9 +295,6 @@ export type Event =
   | RadarDataUpdatedEvent
   | CollaborationCreatedEvent
   | CollaborationDeletedEvent
-  | AccountConnectionOpenedEvent
-  | AccountConnectionClosedEvent
-  | AccountConnectionMessageReceivedEvent
   | MetadataUpdatedEvent
   | MetadataDeletedEvent
   | DocumentUpdatedEvent

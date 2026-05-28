@@ -3,13 +3,9 @@ import { WorkspaceService } from '@colanode/client/services/workspaces/workspace
 import {
   createDebugger,
   Mutation,
-  MutationStatus,
-  SyncMutationsInput,
-  SyncMutationsOutput,
 } from '@colanode/core';
 
 const READ_SIZE = 500;
-const BATCH_SIZE = 50;
 
 const debug = createDebugger('desktop:service:mutation');
 
@@ -83,55 +79,11 @@ export class MutationService {
       `Sending ${pendingMutations.length} local pending mutations for user ${this.workspace.userId}`
     );
 
-    const totalBatches = Math.ceil(validMutations.length / BATCH_SIZE);
-    let currentBatch = 1;
-
-    try {
-      while (validMutations.length > 0) {
-        const batch = validMutations.splice(0, BATCH_SIZE);
-
-        debug(
-          `Sending batch ${currentBatch++} of ${totalBatches} mutations for user ${this.workspace.userId}`
-        );
-
-        const body: SyncMutationsInput = {
-          mutations: batch,
-        };
-
-        const response = await this.workspace.account.client
-          .post(`v1/workspaces/${this.workspace.workspaceId}/mutations`, {
-            json: body,
-          })
-          .json<SyncMutationsOutput>();
-
-        const syncedMutationIds: string[] = [];
-        const unsyncedMutationIds: string[] = [];
-
-        for (const result of response.results) {
-          if (
-            result.status === MutationStatus.OK ||
-            result.status === MutationStatus.CREATED
-          ) {
-            syncedMutationIds.push(result.id);
-          } else {
-            unsyncedMutationIds.push(result.id);
-          }
-        }
-
-        if (syncedMutationIds.length > 0) {
-          await this.deleteMutations(syncedMutationIds, 'synced');
-        }
-
-        if (unsyncedMutationIds.length > 0) {
-          await this.markMutationsAsFailed(unsyncedMutationIds);
-        }
-      }
-    } catch (error) {
-      debug(
-        `Failed to send local pending mutations for user ${this.workspace.userId}: ${error}`
+    if (validMutations.length > 0) {
+      await this.deleteMutations(
+        validMutations.map((mutation) => mutation.id),
+        'remote-sync-disabled'
       );
-
-      return false;
     }
 
     return pendingMutations.length > 0;
