@@ -34,21 +34,7 @@ import { DesktopKyselyService } from '@colanode/desktop/main/kysely-service';
 import { DesktopPathService } from '@colanode/desktop/main/path-service';
 import { handleLocalRequest } from '@colanode/desktop/main/protocols';
 
-const parseBooleanEnv = (value: string | undefined): boolean => {
-  if (!value) {
-    return false;
-  }
-
-  const normalized = value.trim().toLowerCase();
-  return (
-    normalized === '1' ||
-    normalized === 'true' ||
-    normalized === 'yes' ||
-    normalized === 'on'
-  );
-};
-
-const localOnlyMode = parseBooleanEnv(process.env.LOCAL_ONLY);
+const localOnlyMode = true;
 
 const appMeta: AppMeta = {
   type: 'desktop',
@@ -419,14 +405,8 @@ const initApp = async (): Promise<AppInitOutput> => {
 
   await app.metadata.set('app', 'mode.localOnly', localOnlyMode);
 
-  if (!localOnlyMode) {
-    // add default Colanode servers
-    await app.createServer(new URL('https://eu.colanode.com/config'));
-    await app.createServer(new URL('https://us.colanode.com/config'));
-  } else {
-    debug('LOCAL_ONLY mode enabled: skipping default remote server bootstrap');
-    await ensureLocalOnlyBootstrap(app);
-  }
+  debug('LOCAL_ONLY mode enabled: skipping default remote server bootstrap');
+  await ensureLocalOnlyBootstrap(app);
 
   return 'success';
 };

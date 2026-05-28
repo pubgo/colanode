@@ -22,7 +22,6 @@ import { PathService } from '@colanode/client/services/path-service';
 import { ServerService } from '@colanode/client/services/server-service';
 import { WorkspaceService } from '@colanode/client/services/workspaces/workspace-service';
 import { Account } from '@colanode/client/types/accounts';
-import { ServerAttributes } from '@colanode/client/types/servers';
 import {
   ApiHeader,
   build,
@@ -118,17 +117,10 @@ export class AppService {
     return Array.from(this.accounts.values());
   }
 
-  public getServers(): ServerService[] {
-    return Array.from(this.servers.values());
-  }
-
   public getWorkspaces(): WorkspaceService[] {
     return Array.from(this.workspaces.values());
   }
 
-  public getServer(domain: string): ServerService | null {
-    return this.servers.get(domain) ?? null;
-  }
 
   public async init(): Promise<void> {
     await this.migrate();
@@ -239,77 +231,6 @@ export class AppService {
 
     this.workspaces.set(workspace.user_id, workspaceService);
     return workspaceService;
-  }
-
-  public async createServer(url: URL): Promise<ServerService | null> {
-    const domain = url.host;
-    if (this.servers.has(domain)) {
-      return this.servers.get(domain)!;
-    }
-
-    const config = await ServerService.fetchServerConfig(url);
-    if (!config) {
-      return null;
-    }
-
-    const attributes: ServerAttributes = {
-      sha: config.sha,
-      pathPrefix: config.pathPrefix,
-      insecure: url.protocol === 'http:',
-      account: config.account?.google.enabled
-        ? {
-          google: {
-            enabled: config.account.google.enabled,
-            clientId: config.account.google.clientId,
-          },
-        }
-        : undefined,
-    };
-
-    const createdServer = await this.database
-      .insertInto('servers')
-      .values({
-        domain,
-        attributes: JSON.stringify(attributes),
-        avatar: config.avatar,
-        name: config.name,
-        version: config.version,
-        created_at: new Date().toISOString(),
-      })
-      .returningAll()
-      .executeTakeFirst();
-
-    if (!createdServer) {
-      return null;
-    }
-
-    const serverService = await this.initServer(createdServer);
-
-    return serverService;
-  }
-
-  public async deleteServer(domain: string): Promise<void> {
-    if (!this.servers.has(domain)) {
-      return;
-    }
-
-    for (const account of this.accounts.values()) {
-      if (account.server.domain === domain) {
-        await account.logout();
-      }
-    }
-
-    const deletedServer = await this.database
-      .deleteFrom('servers')
-      .returningAll()
-      .where('domain', '=', domain)
-      .executeTakeFirst();
-
-    this.servers.delete(domain);
-
-    if (!deletedServer) {
-      return;
-    }
   }
 
   private async initJobSchedules(): Promise<void> {
