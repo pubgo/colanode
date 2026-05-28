@@ -1,7 +1,5 @@
 import { createRouter } from '@tanstack/react-router';
 
-import { authRoute } from '@colanode/ui/routes/auth';
-import { loginRoute } from '@colanode/ui/routes/auth/login';
 import { workspaceCreateRoute } from '@colanode/ui/routes/create';
 import { homeRoute } from '@colanode/ui/routes/home';
 import { rootRoute } from '@colanode/ui/routes/root';
@@ -39,7 +37,6 @@ import {
 
 export const routeTree = rootRoute.addChildren([
   homeRoute,
-  authRoute.addChildren([loginRoute]),
   workspaceCreateRoute,
   workspaceRoute.addChildren([
     workspaceRedirectRoute,

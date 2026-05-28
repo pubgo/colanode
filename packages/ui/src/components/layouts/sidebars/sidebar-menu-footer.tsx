@@ -1,6 +1,6 @@
 import { useLiveQuery } from '@tanstack/react-db';
 import { useNavigate } from '@tanstack/react-router';
-import { Check, Plus } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useState } from 'react';
 
 import { UnreadState } from '@colanode/client/types';
@@ -17,10 +17,7 @@ import {
 import { UnreadBadge } from '@colanode/ui/components/ui/unread-badge';
 import { useRadar } from '@colanode/ui/contexts/radar';
 import { useWorkspace } from '@colanode/ui/contexts/workspace';
-import {
-  getAccountWorkspaceUserId,
-  isLocalOnlyMode,
-} from '@colanode/ui/routes/utils';
+import { getAccountWorkspaceUserId } from '@colanode/ui/routes/utils';
 
 export function SidebarMenuFooter() {
   const workspace = useWorkspace();
@@ -49,7 +46,6 @@ export function SidebarMenuFooter() {
     (acc, curr) => acc + curr.unreadCount,
     0
   );
-  const localOnly = isLocalOnlyMode();
 
   if (!currentAccount) {
     return null;
@@ -125,20 +121,7 @@ export function SidebarMenuFooter() {
           );
         })}
 
-        {!localOnly && (
-          <>
-            <DropdownMenuSeparator className="my-1" />
-            <DropdownMenuItem
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                navigate({ to: '/auth/login' });
-              }}
-            >
-              <Plus className="size-4" />
-              <p className="font-medium">Add account</p>
-            </DropdownMenuItem>
-          </>
-        )}
+        <DropdownMenuSeparator className="my-1" />
       </DropdownMenuContent>
     </DropdownMenu>
   );

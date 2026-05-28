@@ -12,7 +12,6 @@ import { createDownloadsCollection } from '@colanode/ui/collections/downloads';
 import { createMetadataCollection } from '@colanode/ui/collections/metadata';
 import { createNodeReactionsCollection } from '@colanode/ui/collections/node-reactions';
 import { createNodesCollection } from '@colanode/ui/collections/nodes';
-import { createServersCollection } from '@colanode/ui/collections/servers';
 import { createTabsCollection } from '@colanode/ui/collections/tabs';
 import { createTempFilesCollection } from '@colanode/ui/collections/temp-files';
 import { createUsersCollection } from '@colanode/ui/collections/users';
@@ -45,7 +44,6 @@ export class WorkspaceCollections {
 }
 
 export class AppCollections {
-  public readonly servers = createServersCollection();
   public readonly accounts = createAccountsCollection();
   public readonly tabs = createTabsCollection();
   public readonly metadata = createMetadataCollection();
@@ -84,7 +82,6 @@ export class AppCollections {
     });
 
     await Promise.all([
-      this.servers.preload(),
       this.accounts.preload(),
       this.metadata.preload(),
       this.tabs.preload(),

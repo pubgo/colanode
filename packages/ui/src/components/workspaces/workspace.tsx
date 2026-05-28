@@ -1,7 +1,6 @@
 import { eq, useLiveQuery } from '@tanstack/react-db';
 
 import { collections } from '@colanode/ui/collections';
-import { ServerProvider } from '@colanode/ui/components/servers/server-provider';
 import { WorkspaceLayout } from '@colanode/ui/components/workspaces/workspace-layout';
 import { WorkspaceLocationTracker } from '@colanode/ui/components/workspaces/workspace-location-tracker';
 import { WorkspaceNotFound } from '@colanode/ui/components/workspaces/workspace-not-found';
@@ -27,26 +26,11 @@ export const Workspace = ({ userId }: WorkspaceProps) => {
     [userId]
   );
 
-  const accountQuery = useLiveQuery(
-    (q) =>
-      q
-        .from({ accounts: collections.accounts })
-        .where(({ accounts }) =>
-          eq(accounts.id, workspaceQuery.data?.accountId)
-        )
-        .select(({ accounts }) => ({
-          server: accounts.server,
-        }))
-        .findOne(),
-    [workspaceQuery.data?.accountId]
-  );
-
   const role = workspaceQuery.data?.role;
   const workspaceId = workspaceQuery.data?.workspaceId;
   const accountId = workspaceQuery.data?.accountId;
-  const server = accountQuery.data?.server;
 
-  if (!workspaceId || !accountId || !server) {
+  if (!workspaceId || !accountId) {
     return <WorkspaceNotFound />;
   }
 
@@ -55,19 +39,17 @@ export const Workspace = ({ userId }: WorkspaceProps) => {
   }
 
   return (
-    <ServerProvider domain={server}>
-      <WorkspaceContext.Provider
-        value={{
-          accountId: accountId,
-          workspaceId: workspaceId,
-          userId,
-          role,
-          collections: collections.workspace(userId),
-        }}
-      >
-        <WorkspaceLocationTracker />
-        <WorkspaceLayout />
-      </WorkspaceContext.Provider>
-    </ServerProvider>
+    <WorkspaceContext.Provider
+      value={{
+        accountId: accountId,
+        workspaceId: workspaceId,
+        userId,
+        role,
+        collections: collections.workspace(userId),
+      }}
+    >
+      <WorkspaceLocationTracker />
+      <WorkspaceLayout />
+    </WorkspaceContext.Provider>
   );
 };

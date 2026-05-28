@@ -19,11 +19,7 @@ export const workspaceCreateRoute = createRoute({
   beforeLoad: () => {
     const accountsCount = collections.accounts.size;
     if (accountsCount === 0) {
-      if (isLocalOnlyMode()) {
-        throw redirect({ to: '/', replace: true });
-      }
-
-      throw redirect({ to: '/auth/login', replace: true });
+      throw redirect({ to: '/', replace: true });
     }
   },
   loader: () => {
