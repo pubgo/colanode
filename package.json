@@ -19,7 +19,7 @@
     "build": "turbo run build",
     "clean": "turbo run clean",
     "dev": "turbo run dev",
-    "watch": "turbo watch build --filter=@colanode/{core,crdt,server}",
+    "watch": "turbo watch build --filter=@colanode/{core,crdt}",
     "lint": "turbo run lint --parallel",
     "test": "turbo run test -- --watch false",
     "format": "prettier --write .",

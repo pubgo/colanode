@@ -77,7 +77,7 @@ helm install my-colanode ./hosting/kubernetes/chart \
 
 - The server image already ships with a default configuration. Only two env vars are strictly required: `POSTGRES_URL` and `REDIS_URL` (because the default configuration references them via `env://`).
 - If you do add your own `config.json`, the default configuration still expects those pointers. The chart wires them up automatically via `POSTGRES_URL=env://POSTGRES_URL` and `REDIS_URL=env://REDIS_URL`, so a vanilla install works without extra values.
-- To supply your own JSON file, copy `apps/server/config.example.json`, edit it, and enable the new override:
+- To supply your own JSON file, prepare a local `config.json` and enable the new override:
 
   ```bash
   helm install my-colanode ./hosting/kubernetes/chart \

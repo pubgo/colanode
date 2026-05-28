@@ -1,6 +1,6 @@
 # Contributing to Colanode
 
-Thanks for taking the time to contribute! Colanode is an open-source, local-first collaboration platform with web, desktop, and server components. We welcome bug reports, feature requests, docs improvements, and code contributions.
+Thanks for taking the time to contribute! Colanode is an open-source, local-first collaboration platform with web and desktop clients. We welcome bug reports, feature requests, docs improvements, and code contributions.
 
 ## Before you start
 
@@ -18,10 +18,8 @@ Before making any significant changes, please open an issue to discuss the propo
 See the main [README.md](README.md) for full local setup details:
 
 - Root setup: `npm install`
-- Server: `apps/server` (uses Postgres + Redis; Docker Compose is provided)
 - Web: `apps/web`
 - Desktop: `apps/desktop`
-- Mobile: `apps/mobile` (experimental; not ready for production use)
 - Scripts: see [scripts/README.md](scripts/README.md) for emojis, icons, and seed data
 
 Notes:

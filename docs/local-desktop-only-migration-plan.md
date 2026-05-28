@@ -55,7 +55,8 @@
 
 ## 3.3 方案 C：仓库裁剪（最终方案）
 在 B 稳定后，物理删除无用模块：
-- `apps/server`、`hosting`、`apps/web`、`apps/mobile`（若确认不再维护）；
+- 已删除：服务端与移动端应用目录；
+- 视产品范围再评估：`hosting`、`apps/web`；
 - 清理 root scripts / turbo pipeline / CI。
 
 优点：仓库体积、构建时长、认知负担显著降低；
@@ -132,7 +133,8 @@
 **目标**：物理删除无用模块并更新工程配置。
 
 任务：
-- 删除目录（按确认范围）：`apps/server`、`hosting`、`apps/web`、`apps/mobile`；
+- 删除目录（按确认范围）：`hosting`、`apps/web`；
+- 验证服务端与移动端应用目录已从仓库移除；
 - 更新 root `package.json` scripts、workspace 配置、`turbo.json` task 图；
 - 更新 README/CONTRIBUTING/开发文档。
 
@@ -162,10 +164,8 @@
 - `packages/ui/src/routes/auth/**`
 
 ## 5.2 第四阶段可删（仓库级）
-- `apps/server/**`
 - `hosting/**`
 - `apps/web/**`（若明确仅桌面）
-- `apps/mobile/**`（若明确不再维护）
 
 ---
 
