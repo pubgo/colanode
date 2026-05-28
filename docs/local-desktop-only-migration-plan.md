@@ -164,7 +164,6 @@
 - `packages/ui/src/routes/auth/**`
 
 ## 5.2 第四阶段可删（仓库级）
-- `hosting/**`
 - `apps/web/**`（若明确仅桌面）
 
 ---
