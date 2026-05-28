@@ -25,7 +25,6 @@ import { NodeReactionCreateMutationHandler } from './nodes/node-reaction-create'
 import { NodeReactionDeleteMutationHandler } from './nodes/node-reaction-delete';
 import { NodeUpdateMutationHandler } from './nodes/node-update';
 import { SpaceChildReorderMutationHandler } from './spaces/space-child-reorder';
-import { UserStorageUpdateMutationHandler } from './users/user-storage-update';
 import { WorkspaceCreateMutationHandler } from './workspaces/workspace-create';
 import { WorkspaceDeleteMutationHandler } from './workspaces/workspace-delete';
 import { WorkspaceUpdateMutationHandler } from './workspaces/workspace-update';
@@ -60,7 +59,6 @@ export const buildMutationHandlerMap = (
     'metadata.update': new MetadataUpdateMutationHandler(app),
     'metadata.delete': new MetadataDeleteMutationHandler(app),
     'workspace.delete': new WorkspaceDeleteMutationHandler(app),
-    'user.storage.update': new UserStorageUpdateMutationHandler(app),
     'temp.file.create': new TempFileCreateMutationHandler(app),
     'tab.create': new TabCreateMutationHandler(app),
     'tab.update': new TabUpdateMutationHandler(app),
