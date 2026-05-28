@@ -2,7 +2,6 @@ import { MutationHandler } from '@colanode/client/lib';
 import { MutationMap } from '@colanode/client/mutations';
 import { AppService } from '@colanode/client/services';
 
-import { AccountUpdateMutationHandler } from './accounts/account-update';
 import { MetadataDeleteMutationHandler } from './apps/metadata-delete';
 import { MetadataUpdateMutationHandler } from './apps/metadata-update';
 import { TabCreateMutationHandler } from './apps/tab-create';
@@ -26,9 +25,7 @@ import { NodeReactionCreateMutationHandler } from './nodes/node-reaction-create'
 import { NodeReactionDeleteMutationHandler } from './nodes/node-reaction-delete';
 import { NodeUpdateMutationHandler } from './nodes/node-update';
 import { SpaceChildReorderMutationHandler } from './spaces/space-child-reorder';
-import { UserRoleUpdateMutationHandler } from './users/user-role-update';
 import { UserStorageUpdateMutationHandler } from './users/user-storage-update';
-import { UsersCreateMutationHandler } from './users/users-create';
 import { WorkspaceCreateMutationHandler } from './workspaces/workspace-create';
 import { WorkspaceDeleteMutationHandler } from './workspaces/workspace-delete';
 import { WorkspaceUpdateMutationHandler } from './workspaces/workspace-update';
@@ -53,15 +50,12 @@ export const buildMutationHandlerMap = (
     'node.interaction.seen': new NodeInteractionSeenMutationHandler(app),
     'node.reaction.create': new NodeReactionCreateMutationHandler(app),
     'node.reaction.delete': new NodeReactionDeleteMutationHandler(app),
-    'user.role.update': new UserRoleUpdateMutationHandler(app),
-    'users.create': new UsersCreateMutationHandler(app),
     'workspace.create': new WorkspaceCreateMutationHandler(app),
     'workspace.update': new WorkspaceUpdateMutationHandler(app),
     'avatar.upload': new AvatarUploadMutationHandler(app),
     'file.create': new FileCreateMutationHandler(app),
     'file.download': new FileDownloadMutationHandler(app),
     'space.child.reorder': new SpaceChildReorderMutationHandler(app),
-    'account.update': new AccountUpdateMutationHandler(app),
     'document.update': new DocumentUpdateMutationHandler(app),
     'metadata.update': new MetadataUpdateMutationHandler(app),
     'metadata.delete': new MetadataDeleteMutationHandler(app),

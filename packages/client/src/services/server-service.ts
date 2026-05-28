@@ -1,5 +1,3 @@
-import ky from 'ky';
-
 import { SelectServer } from '@colanode/client/databases';
 import { FeatureKey, isFeatureSupported } from '@colanode/client/lib';
 import { isServerOutdated } from '@colanode/client/lib/servers';
@@ -9,9 +7,6 @@ import {
   ServerAttributes,
   ServerState,
 } from '@colanode/client/types/servers';
-import { createDebugger, ServerConfig } from '@colanode/core';
-
-const debug = createDebugger('desktop:service:server');
 
 export class ServerService {
   private readonly app: AppService;
@@ -76,82 +71,7 @@ export class ServerService {
   }
 
   public async init(): Promise<void> {
-    if (this.app.meta.localOnly) {
-      return;
-    }
-
-    await this.sync();
-  }
-
-  public async sync(): Promise<boolean> {
-    const config = await ServerService.fetchServerConfig(this.configUrl);
-    if (config) {
-      const attributes: ServerAttributes = {
-        ...this.attributes,
-        sha: config.sha,
-        account: config.account?.google.enabled
-          ? {
-            google: {
-              enabled: config.account.google.enabled,
-              clientId: config.account.google.clientId,
-            },
-          }
-          : undefined,
-      };
-
-      this.attributes = attributes;
-      this.avatar = config.avatar;
-      this.name = config.name;
-      this.version = config.version;
-      this.syncedAt = new Date();
-      this.isOutdated = isServerOutdated(config.version);
-
-      await this.app.database
-        .updateTable('servers')
-        .returningAll()
-        .set({
-          synced_at: new Date().toISOString(),
-          avatar: config.avatar,
-          name: config.name,
-          version: config.version,
-          attributes: JSON.stringify(attributes),
-        })
-        .where('domain', '=', this.domain)
-        .executeTakeFirst();
-    }
-
-    const existingState = this.state;
-    const newState: ServerState = {
-      isAvailable: config !== null,
-      lastCheckedAt: new Date(),
-      lastCheckedSuccessfullyAt: config !== null ? new Date() : null,
-      count: existingState ? existingState.count + 1 : 1,
-    };
-
-    const wasAvailable = existingState?.isAvailable ?? false;
-    const isAvailable = newState.isAvailable;
-    if (wasAvailable !== isAvailable) {
-      debug(
-        `Server ${this.domain} availability changed: ${wasAvailable} -> ${isAvailable}`
-      );
-    }
-
-    this.state = newState;
-
-    return isAvailable;
-  }
-
-  public static async fetchServerConfig(configUrl: URL | string) {
-    try {
-      const response = await ky.get(configUrl).json<ServerConfig>();
-      return response;
-    } catch (error) {
-      debug(
-        `Server with config URL ${configUrl.toString()} is unavailable. ${error}`
-      );
-    }
-
-    return null;
+    return;
   }
 
   private buildConfigUrl() {

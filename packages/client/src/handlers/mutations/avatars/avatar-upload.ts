@@ -1,3 +1,5 @@
+import { eventBus } from '@colanode/client/lib/event-bus';
+import { mapAvatar } from '@colanode/client/lib/mappers';
 import { MutationHandler } from '@colanode/client/lib/types';
 import { MutationError, MutationErrorCode } from '@colanode/client/mutations';
 import {
@@ -5,14 +7,10 @@ import {
   AvatarUploadMutationOutput,
 } from '@colanode/client/mutations/avatars/avatar-upload';
 import { AppService } from '@colanode/client/services/app-service';
-
-interface AvatarUploadResponse {
-  id: string;
-}
+import { generateId, IdType } from '@colanode/core';
 
 export class AvatarUploadMutationHandler
-  implements MutationHandler<AvatarUploadMutationInput>
-{
+  implements MutationHandler<AvatarUploadMutationInput> {
   private readonly app: AppService;
 
   constructor(appService: AppService) {
@@ -42,22 +40,53 @@ export class AvatarUploadMutationHandler
         );
       }
 
-      const fileStream = await this.app.fs.readStream(filePath);
-      const response = await account.client
-        .post('v1/avatars', {
-          body: fileStream,
-          headers: {
-            'Content-Type': input.file.mimeType,
-            'Content-Length': input.file.size.toString(),
-          },
-        })
-        .json<AvatarUploadResponse>();
+      const avatarId = generateId(IdType.Avatar);
+      const avatarPath = this.app.path.avatar(avatarId);
+      const now = new Date().toISOString();
 
-      await this.app.fs.delete(filePath);
-      await this.app.assets.downloadAvatar(account.id, response.id);
+      await this.app.fs.copy(filePath, avatarPath);
+
+      const avatarBytes = await this.app.fs.readFile(avatarPath);
+      const createdAvatar = await this.app.database
+        .insertInto('avatars')
+        .returningAll()
+        .values({
+          id: avatarId,
+          path: avatarPath,
+          size: avatarBytes.length,
+          created_at: now,
+          opened_at: now,
+        })
+        .executeTakeFirst();
+
+      if (!createdAvatar) {
+        throw new MutationError(
+          MutationErrorCode.ApiError,
+          'Failed to save avatar'
+        );
+      }
+
+      const url = await this.app.fs.url(avatarPath);
+      if (!url) {
+        await this.app.fs.delete(avatarPath);
+        await this.app.database
+          .deleteFrom('avatars')
+          .where('id', '=', avatarId)
+          .execute();
+
+        throw new MutationError(
+          MutationErrorCode.ApiError,
+          'Failed to load saved avatar'
+        );
+      }
+
+      eventBus.publish({
+        type: 'avatar.created',
+        avatar: mapAvatar(createdAvatar, url),
+      });
 
       return {
-        id: response.id,
+        id: avatarId,
       };
     } catch (error) {
       if (error instanceof Error) {

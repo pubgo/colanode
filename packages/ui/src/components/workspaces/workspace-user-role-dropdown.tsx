@@ -1,16 +1,4 @@
-import { Check, ChevronDown } from 'lucide-react';
-import { toast } from 'sonner';
-
 import { WorkspaceRole } from '@colanode/core';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@colanode/ui/components/ui/dropdown-menu';
-import { Spinner } from '@colanode/ui/components/ui/spinner';
-import { useWorkspace } from '@colanode/ui/contexts/workspace';
-import { useMutation } from '@colanode/ui/hooks/use-mutation';
 
 interface WorkspaceRoleItem {
   name: string;
@@ -59,75 +47,13 @@ interface WorkspaceUserRoleDropdownProps {
 }
 
 export const WorkspaceUserRoleDropdown = ({
-  userId,
+  userId: _userId,
   value,
-  canEdit,
+  canEdit: _canEdit,
 }: WorkspaceUserRoleDropdownProps) => {
-  const workspace = useWorkspace();
-  const { mutate, isPending } = useMutation();
   const currentRole = roles.find((role) => role.value === value);
 
-  if (!canEdit) {
-    return (
-      <p className="p-1 text-sm text-muted-foreground">{currentRole?.name}</p>
-    );
-  }
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <p className="flex cursor-pointer flex-row items-center p-1 text-sm text-muted-foreground hover:bg-accent">
-          {currentRole?.name}
-          {isPending ? (
-            <Spinner className="ml-2 size-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="ml-2 size-4 text-muted-foreground" />
-          )}
-        </p>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56">
-        {roles
-          .filter((role) => role.enabled)
-          .map((role) => (
-            <DropdownMenuItem
-              key={role.value}
-              onSelect={() => {
-                if (isPending) {
-                  return;
-                }
-
-                if (role.value === value) {
-                  return;
-                }
-
-                mutate({
-                  input: {
-                    type: 'user.role.update',
-                    accountId: workspace.accountId,
-                    workspaceId: workspace.workspaceId,
-                    userId: userId,
-                    role: role.value,
-                  },
-                  onError(error) {
-                    toast.error(error.message);
-                  },
-                });
-              }}
-            >
-              <div className="flex w-full flex-row items-center justify-between">
-                <div className="flex flex-1 w-full flex-col">
-                  <p className="mb-1 text-sm font-medium leading-none">
-                    {role.name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {role.description}
-                  </p>
-                </div>
-                {value === role.value && <Check className="size-4" />}
-              </div>
-            </DropdownMenuItem>
-          ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <p className="p-1 text-sm text-muted-foreground">{currentRole?.name}</p>
   );
 };
