@@ -2,7 +2,6 @@ import ky from 'ky';
 
 import { SelectServer } from '@colanode/client/databases';
 import { FeatureKey, isFeatureSupported } from '@colanode/client/lib';
-import { eventBus } from '@colanode/client/lib/event-bus';
 import { isServerOutdated } from '@colanode/client/lib/servers';
 import { AppService } from '@colanode/client/services/app-service';
 import {
@@ -78,11 +77,6 @@ export class ServerService {
 
   public async init(): Promise<void> {
     if (this.app.meta.localOnly) {
-      eventBus.publish({
-        type: 'server.updated',
-        server: this.server,
-      });
-
       return;
     }
 
@@ -137,19 +131,12 @@ export class ServerService {
     const wasAvailable = existingState?.isAvailable ?? false;
     const isAvailable = newState.isAvailable;
     if (wasAvailable !== isAvailable) {
-      eventBus.publish({
-        type: 'server.availability.changed',
-        domain: this.domain,
-        isAvailable,
-      });
+      debug(
+        `Server ${this.domain} availability changed: ${wasAvailable} -> ${isAvailable}`
+      );
     }
 
     this.state = newState;
-
-    eventBus.publish({
-      type: 'server.updated',
-      server: this.server,
-    });
 
     return isAvailable;
   }

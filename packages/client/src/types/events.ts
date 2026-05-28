@@ -18,7 +18,6 @@ import {
   NodeReaction,
   NodeReference,
 } from '@colanode/client/types/nodes';
-import { Server } from '@colanode/client/types/servers';
 import { User } from '@colanode/client/types/users';
 import { Workspace } from '@colanode/client/types/workspaces';
 import { Message } from '@colanode/core';
@@ -147,27 +146,6 @@ export type WorkspaceUpdatedEvent = {
 export type WorkspaceDeletedEvent = {
   type: 'workspace.deleted';
   workspace: Workspace;
-};
-
-export type ServerCreatedEvent = {
-  type: 'server.created';
-  server: Server;
-};
-
-export type ServerUpdatedEvent = {
-  type: 'server.updated';
-  server: Server;
-};
-
-export type ServerDeletedEvent = {
-  type: 'server.deleted';
-  server: Server;
-};
-
-export type ServerAvailabilityChangedEvent = {
-  type: 'server.availability.changed';
-  domain: string;
-  isAvailable: boolean;
 };
 
 export type QueryResultUpdatedEvent = {
@@ -324,10 +302,6 @@ export type Event =
   | WorkspaceCreatedEvent
   | WorkspaceUpdatedEvent
   | WorkspaceDeletedEvent
-  | ServerCreatedEvent
-  | ServerUpdatedEvent
-  | ServerDeletedEvent
-  | ServerAvailabilityChangedEvent
   | LocalFileCreatedEvent
   | LocalFileUpdatedEvent
   | LocalFileDeletedEvent

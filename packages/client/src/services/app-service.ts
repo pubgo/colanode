@@ -258,11 +258,11 @@ export class AppService {
       insecure: url.protocol === 'http:',
       account: config.account?.google.enabled
         ? {
-            google: {
-              enabled: config.account.google.enabled,
-              clientId: config.account.google.clientId,
-            },
-          }
+          google: {
+            enabled: config.account.google.enabled,
+            clientId: config.account.google.clientId,
+          },
+        }
         : undefined,
     };
 
@@ -285,17 +285,11 @@ export class AppService {
 
     const serverService = await this.initServer(createdServer);
 
-    eventBus.publish({
-      type: 'server.created',
-      server: serverService.server,
-    });
-
     return serverService;
   }
 
   public async deleteServer(domain: string): Promise<void> {
-    const server = this.servers.get(domain);
-    if (!server) {
+    if (!this.servers.has(domain)) {
       return;
     }
 
@@ -313,11 +307,8 @@ export class AppService {
 
     this.servers.delete(domain);
 
-    if (deletedServer) {
-      eventBus.publish({
-        type: 'server.deleted',
-        server: server.server,
-      });
+    if (!deletedServer) {
+      return;
     }
   }
 

@@ -28,7 +28,6 @@ import { NodeListQueryHandler } from './nodes/node-list';
 import { NodeReactionsListQueryHandler } from './nodes/node-reaction-list';
 import { RecordFieldValueCountQueryHandler } from './records/record-field-value-count';
 import { RecordSearchQueryHandler } from './records/record-search';
-import { ServerListQueryHandler } from './servers/server-list';
 import { UserListQueryHandler } from './users/user-list';
 import { UserSearchQueryHandler } from './users/user-search';
 import { WorkspaceListQueryHandler } from './workspaces/workspace-list';
@@ -68,6 +67,5 @@ export const buildQueryHandlerMap = (app: AppService): QueryHandlerMap => {
     'icon.svg.get': new IconSvgGetQueryHandler(app),
     'emoji.svg.get': new EmojiSvgGetQueryHandler(app),
     'tabs.list': new TabsListQueryHandler(app),
-    'server.list': new ServerListQueryHandler(app),
   };
 };
