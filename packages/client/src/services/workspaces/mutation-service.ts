@@ -49,10 +49,6 @@ export class MutationService {
   }
 
   private async sendMutations(): Promise<boolean> {
-    if (!this.workspace.account.server.isAvailable) {
-      return false;
-    }
-
     const pendingMutations = await this.workspace.database
       .selectFrom('mutations')
       .selectAll()
@@ -140,18 +136,6 @@ export class MutationService {
 
     await this.workspace.database
       .deleteFrom('mutations')
-      .where('id', 'in', mutationIds)
-      .execute();
-  }
-
-  private async markMutationsAsFailed(mutationIds: string[]): Promise<void> {
-    debug(
-      `Marking ${mutationIds.length} local pending mutations as failed for user ${this.workspace.userId}`
-    );
-
-    await this.workspace.database
-      .updateTable('mutations')
-      .set((eb) => ({ retries: eb('retries', '+', 1) }))
       .where('id', 'in', mutationIds)
       .execute();
   }

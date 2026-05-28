@@ -86,10 +86,6 @@ export class AssetService {
       return null;
     }
 
-    if (this.app.meta.localOnly || !account.server.isAvailable) {
-      return false;
-    }
-
     // Remote avatar download has been disabled in local-first mode.
     return false;
   }

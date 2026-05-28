@@ -1,5 +1,3 @@
-import { KyInstance } from 'ky';
-
 import { eventBus } from '@colanode/client/lib/event-bus';
 import {
   mapAccount,
@@ -18,24 +16,15 @@ const debug = createDebugger('desktop:service:account');
 export class AccountService {
   public readonly account: Account;
   public readonly socket: AccountSocket;
-  public readonly client: KyInstance;
   public readonly app: AppService;
-  public readonly server: ServerService;
 
-  constructor(account: Account, server: ServerService, app: AppService) {
+  constructor(account: Account, _server: ServerService, app: AppService) {
     debug(`Initializing account service for account ${account.id}`);
 
     this.account = account;
-    this.server = server;
     this.app = app;
 
     this.socket = new AccountSocket(this);
-    this.client = this.app.client.extend({
-      prefixUrl: this.server.httpBaseUrl,
-      headers: {
-        Authorization: `Bearer ${this.account.token}`,
-      },
-    });
   }
 
   public get id(): string {

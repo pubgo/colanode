@@ -1,4 +1,3 @@
-import ky, { KyInstance } from 'ky';
 import { Kysely, Migration, Migrator } from 'kysely';
 import ms from 'ms';
 
@@ -23,8 +22,6 @@ import { ServerService } from '@colanode/client/services/server-service';
 import { WorkspaceService } from '@colanode/client/services/workspaces/workspace-service';
 import { Account } from '@colanode/client/types/accounts';
 import {
-  ApiHeader,
-  build,
   createDebugger,
   generateFractionalIndex,
   generateId,
@@ -48,7 +45,6 @@ export class AppService {
   public readonly mediator: Mediator;
   public readonly assets: AssetService;
   public readonly jobs: JobService;
-  public readonly client: KyInstance;
 
   constructor(
     meta: AppMeta,
@@ -69,15 +65,6 @@ export class AppService {
     this.mediator = new Mediator(this);
     this.assets = new AssetService(this);
     this.jobs = new JobService(this);
-
-    this.client = ky.create({
-      headers: {
-        [ApiHeader.ClientType]: this.meta.type,
-        [ApiHeader.ClientPlatform]: this.meta.platform,
-        [ApiHeader.ClientVersion]: build.version,
-      },
-      timeout: ms('30 seconds'),
-    });
 
     this.metadata = new MetadataService(this);
 

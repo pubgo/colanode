@@ -22,8 +22,6 @@ export class ServerService {
 
   public readonly domain: string;
   public readonly configUrl: string;
-  public readonly socketBaseUrl: string;
-  public readonly httpBaseUrl: string;
 
   constructor(app: AppService, server: SelectServer) {
     this.app = app;
@@ -35,8 +33,6 @@ export class ServerService {
     this.createdAt = new Date(server.created_at);
     this.syncedAt = server.synced_at ? new Date(server.synced_at) : null;
     this.configUrl = this.buildConfigUrl();
-    this.socketBaseUrl = this.buildSocketBaseUrl();
-    this.httpBaseUrl = this.buildHttpBaseUrl();
     this.isOutdated = isServerOutdated(server.version);
 
     this.state = {
@@ -77,16 +73,6 @@ export class ServerService {
   private buildConfigUrl() {
     const protocol = this.attributes.insecure ? 'http' : 'https';
     return this.buildBaseUrl(protocol) + '/config';
-  }
-
-  private buildHttpBaseUrl() {
-    const protocol = this.attributes.insecure ? 'http' : 'https';
-    return this.buildBaseUrl(protocol) + '/client';
-  }
-
-  private buildSocketBaseUrl() {
-    const protocol = this.attributes.insecure ? 'ws' : 'wss';
-    return this.buildBaseUrl(protocol) + '/client';
   }
 
   private buildBaseUrl(protocol: string) {

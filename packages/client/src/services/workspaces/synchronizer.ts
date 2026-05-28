@@ -103,23 +103,6 @@ export class Synchronizer<TInput extends SynchronizerInput> {
     return cursor?.value ?? '0';
   }
 
-  private async saveCursor(cursor: string) {
-    await this.workspace.database
-      .insertInto('cursors')
-      .values({
-        key: this.cursorKey,
-        value: cursor,
-        created_at: new Date().toISOString(),
-      })
-      .onConflict((eb) =>
-        eb.column('key').doUpdateSet({
-          value: cursor,
-          updated_at: new Date().toISOString(),
-        })
-      )
-      .execute();
-  }
-
   public destroy() {
     this.eventLoop.stop();
   }
