@@ -12,13 +12,13 @@ import { useMutation } from '@colanode/ui/hooks/use-mutation';
 
 type LoginState =
   | {
-      type: 'login';
-    }
+    type: 'login';
+  }
   | {
-      type: 'verify';
-      id: string;
-      expiresAt: string;
-    };
+    type: 'verify';
+    id: string;
+    expiresAt: string;
+  };
 
 export const Login = () => {
   const navigate = useNavigate();
@@ -161,16 +161,6 @@ export const Login = () => {
               onLogin={handleGoogleLogin}
               isPending={isGoogleLoginPending}
             />
-            <Button
-              variant="link"
-              className="w-full text-muted-foreground"
-              onClick={() => {
-                navigate({ to: '/auth/register' });
-              }}
-              type="button"
-            >
-              No account yet? Register
-            </Button>
           </>
         )}
         {state.type === 'verify' && (

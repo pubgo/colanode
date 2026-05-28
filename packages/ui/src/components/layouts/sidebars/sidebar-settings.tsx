@@ -1,7 +1,6 @@
 import {
   Download,
   Info,
-  LogOut,
   Palette,
   Settings,
   Users,
@@ -10,13 +9,10 @@ import {
 import { SidebarHeader } from '@colanode/ui/components/layouts/sidebars/sidebar-header';
 import { SidebarSettingsItem } from '@colanode/ui/components/layouts/sidebars/sidebar-settings-item';
 import { Link } from '@colanode/ui/components/ui/link';
-import { Separator } from '@colanode/ui/components/ui/separator';
 import { useApp } from '@colanode/ui/contexts/app';
-import { isLocalOnlyMode } from '@colanode/ui/routes/utils';
 
 export const SidebarSettings = () => {
   const app = useApp();
-  const localOnly = isLocalOnlyMode();
 
   return (
     <div className="flex flex-col gap-4 h-full px-2 group/sidebar">
@@ -53,20 +49,6 @@ export const SidebarSettings = () => {
           </Link>
         )}
       </div>
-      {!localOnly && (
-        <div className="flex w-full min-w-0 flex-col gap-1">
-          <SidebarHeader title="Account settings" />
-          <Link from="/workspace/$userId" to="account">
-            {({ isActive }) => (
-              <SidebarSettingsItem
-                title="General"
-                icon={Settings}
-                isActive={isActive}
-              />
-            )}
-          </Link>
-        </div>
-      )}
       <div className="flex w-full min-w-0 flex-col gap-1">
         <SidebarHeader title="App settings" />
         <Link from="/workspace/$userId" to="appearance">
@@ -88,20 +70,6 @@ export const SidebarSettings = () => {
           )}
         </Link>
       </div>
-      {!localOnly && (
-        <div className="flex w-full min-w-0 flex-col gap-1">
-          <Separator className="my-2" />
-          <Link from="/workspace/$userId" to="logout">
-            {({ isActive }) => (
-              <SidebarSettingsItem
-                title="Logout"
-                icon={LogOut}
-                isActive={isActive}
-              />
-            )}
-          </Link>
-        </div>
-      )}
     </div>
   );
 };

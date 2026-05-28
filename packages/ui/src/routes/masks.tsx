@@ -75,30 +75,6 @@ export const workspaceDownloadsRouteMask = createRouteMask({
   },
 });
 
-export const accountSettingsRouteMask = createRouteMask({
-  routeTree: routeTree,
-  from: '/workspace/$userId/account',
-  to: '/$workspaceId/account',
-  params: (ctx) => {
-    const workspace = collections.workspaces.get(ctx.userId);
-    return {
-      workspaceId: workspace?.workspaceId ?? 'unknown',
-    };
-  },
-});
-
-export const accountLogoutRouteMask = createRouteMask({
-  routeTree: routeTree,
-  from: '/workspace/$userId/logout',
-  to: '/$workspaceId/logout',
-  params: (ctx) => {
-    const workspace = collections.workspaces.get(ctx.userId);
-    return {
-      workspaceId: workspace?.workspaceId ?? 'unknown',
-    };
-  },
-});
-
 export const appAppearanceRouteMask = createRouteMask({
   routeTree: routeTree,
   from: '/workspace/$userId/appearance',
@@ -144,8 +120,6 @@ export const routeMasks = [
   workspaceSettingsRouteMask,
   workspaceUsersRouteMask,
   workspaceDownloadsRouteMask,
-  accountSettingsRouteMask,
-  accountLogoutRouteMask,
   appAppearanceRouteMask,
   infoRouteMask,
 ];

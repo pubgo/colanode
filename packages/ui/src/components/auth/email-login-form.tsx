@@ -1,5 +1,4 @@
 import { useForm } from '@tanstack/react-form';
-import { useNavigate } from '@tanstack/react-router';
 import { Mail } from 'lucide-react';
 import { z } from 'zod/v4';
 
@@ -23,7 +22,6 @@ interface LoginFormProps {
 }
 
 export const LoginForm = ({ isPending, onSubmit }: LoginFormProps) => {
-  const navigate = useNavigate();
   const form = useForm({
     defaultValues: {
       email: '',
@@ -77,12 +75,7 @@ export const LoginForm = ({ isPending, onSubmit }: LoginFormProps) => {
             <Field data-invalid={isInvalid}>
               <div className="flex flex-row gap-2 items-center">
                 <FieldLabel htmlFor={field.name}>Password</FieldLabel>
-                <p
-                  className="text-xs text-muted-foreground cursor-pointer hover:underline w-full text-right"
-                  onClick={() => {
-                    navigate({ to: '/auth/reset' });
-                  }}
-                >
+                <p className="text-xs text-muted-foreground w-full text-right">
                   Forgot password?
                 </p>
               </div>
