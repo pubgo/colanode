@@ -1,4 +1,3 @@
-import { parseApiError } from '@colanode/client/lib/ky';
 import { MutationHandler } from '@colanode/client/lib/types';
 import { MutationError, MutationErrorCode } from '@colanode/client/mutations';
 import {
@@ -6,7 +5,6 @@ import {
   WorkspaceDeleteMutationOutput,
 } from '@colanode/client/mutations/workspaces/workspace-delete';
 import { AppService } from '@colanode/client/services/app-service';
-import { WorkspaceOutput } from '@colanode/core';
 
 export class WorkspaceDeleteMutationHandler
   implements MutationHandler<WorkspaceDeleteMutationInput> {
@@ -27,36 +25,11 @@ export class WorkspaceDeleteMutationHandler
       );
     }
 
-    try {
-      if (this.app.meta.localOnly) {
-        const workspaceId = workspaceService.workspaceId;
-        await workspaceService.delete();
+    const workspaceId = workspaceService.workspaceId;
+    await workspaceService.delete();
 
-        return {
-          id: workspaceId,
-        };
-      }
-
-      const accountService = this.app.getAccount(workspaceService.accountId);
-      if (!accountService) {
-        throw new MutationError(
-          MutationErrorCode.AccountNotFound,
-          'Account not found or has been logged out.'
-        );
-      }
-
-      const response = await accountService.client
-        .delete(`v1/workspaces/${workspaceService.workspaceId}`)
-        .json<WorkspaceOutput>();
-
-      await workspaceService.delete();
-
-      return {
-        id: response.id,
-      };
-    } catch (error) {
-      const apiError = await parseApiError(error);
-      throw new MutationError(MutationErrorCode.ApiError, apiError.message);
-    }
+    return {
+      id: workspaceId,
+    };
   }
 }

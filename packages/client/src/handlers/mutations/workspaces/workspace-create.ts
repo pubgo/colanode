@@ -1,5 +1,4 @@
 import { eventBus } from '@colanode/client/lib/event-bus';
-import { parseApiError } from '@colanode/client/lib/ky';
 import { mapWorkspace } from '@colanode/client/lib/mappers';
 import { MutationHandler } from '@colanode/client/lib/types';
 import { MutationError, MutationErrorCode } from '@colanode/client/mutations';
@@ -11,8 +10,6 @@ import { AppService } from '@colanode/client/services/app-service';
 import {
   generateId,
   IdType,
-  WorkspaceCreateInput,
-  WorkspaceOutput,
   WorkspaceStatus,
 } from '@colanode/core';
 
@@ -35,101 +32,44 @@ export class WorkspaceCreateMutationHandler implements MutationHandler<Workspace
       );
     }
 
-    try {
-      if (this.app.meta.localOnly) {
-        const now = new Date().toISOString();
-        const createdWorkspace = await this.app.database
-          .insertInto('workspaces')
-          .returningAll()
-          .values({
-            user_id: generateId(IdType.User),
-            workspace_id: generateId(IdType.Workspace),
-            account_id: account.id,
-            name: input.name,
-            description: input.description,
-            avatar: input.avatar,
-            role: 'owner',
-            max_file_size: null,
-            created_at: now,
-            updated_at: now,
-            status: WorkspaceStatus.Active,
-          })
-          .executeTakeFirst();
-
-        if (!createdWorkspace) {
-          throw new MutationError(
-            MutationErrorCode.WorkspaceNotCreated,
-            'Something went wrong creating local workspace. Please try again later.'
-          );
-        }
-
-        await this.app.initWorkspace(createdWorkspace);
-        await this.app.metadata.set('app', 'workspace', createdWorkspace.user_id);
-
-        const workspace = mapWorkspace(createdWorkspace);
-        eventBus.publish({
-          type: 'workspace.created',
-          workspace,
-        });
-
-        return {
-          id: createdWorkspace.workspace_id,
-          userId: createdWorkspace.user_id,
-        };
-      }
-
-      const body: WorkspaceCreateInput = {
+    const now = new Date().toISOString();
+    const createdWorkspace = await this.app.database
+      .insertInto('workspaces')
+      .returningAll()
+      .values({
+        user_id: generateId(IdType.User),
+        workspace_id: generateId(IdType.Workspace),
+        account_id: account.id,
         name: input.name,
         description: input.description,
         avatar: input.avatar,
-      };
+        role: 'owner',
+        max_file_size: null,
+        created_at: now,
+        updated_at: now,
+        status: WorkspaceStatus.Active,
+      })
+      .executeTakeFirst();
 
-      const response = await account.client
-        .post(`v1/workspaces`, {
-          json: body,
-        })
-        .json<WorkspaceOutput>();
-
-      const createdWorkspace = await this.app.database
-        .insertInto('workspaces')
-        .returningAll()
-        .values({
-          user_id: response.user.id,
-          workspace_id: response.id,
-          account_id: response.user.accountId,
-          name: response.name,
-          description: response.description,
-          avatar: response.avatar,
-          role: response.user.role,
-          max_file_size: response.maxFileSize,
-          created_at: new Date().toISOString(),
-          status: response.status,
-        })
-        .onConflict((cb) => cb.doNothing())
-        .executeTakeFirst();
-
-      if (!createdWorkspace) {
-        throw new MutationError(
-          MutationErrorCode.WorkspaceNotCreated,
-          'Something went wrong updating the workspace. Please try again later.'
-        );
-      }
-
-      await this.app.initWorkspace(createdWorkspace);
-
-      const workspace = mapWorkspace(createdWorkspace);
-      eventBus.publish({
-        type: 'workspace.created',
-        workspace: workspace,
-      });
-
-      return {
-        id: createdWorkspace.workspace_id,
-        userId: createdWorkspace.user_id,
-      };
-    } catch (error) {
-      const apiError = await parseApiError(error);
-      throw new MutationError(MutationErrorCode.ApiError, apiError.message);
+    if (!createdWorkspace) {
+      throw new MutationError(
+        MutationErrorCode.WorkspaceNotCreated,
+        'Something went wrong creating local workspace. Please try again later.'
+      );
     }
+
+    await this.app.initWorkspace(createdWorkspace);
+    await this.app.metadata.set('app', 'workspace', createdWorkspace.user_id);
+
+    const workspace = mapWorkspace(createdWorkspace);
+    eventBus.publish({
+      type: 'workspace.created',
+      workspace,
+    });
+
+    return {
+      id: createdWorkspace.workspace_id,
+      userId: createdWorkspace.user_id,
+    };
   }
 }
