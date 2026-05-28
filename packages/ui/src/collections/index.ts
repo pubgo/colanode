@@ -5,7 +5,6 @@ import {
   Download,
   LocalNode,
   NodeReaction,
-  Upload,
   User,
 } from '@colanode/client/types';
 import { createAccountsCollection } from '@colanode/ui/collections/accounts';
@@ -16,7 +15,6 @@ import { createNodesCollection } from '@colanode/ui/collections/nodes';
 import { createServersCollection } from '@colanode/ui/collections/servers';
 import { createTabsCollection } from '@colanode/ui/collections/tabs';
 import { createTempFilesCollection } from '@colanode/ui/collections/temp-files';
-import { createUploadsCollection } from '@colanode/ui/collections/uploads';
 import { createUsersCollection } from '@colanode/ui/collections/users';
 import { createWorkspacesCollection } from '@colanode/ui/collections/workspaces';
 
@@ -25,7 +23,6 @@ export class WorkspaceCollections {
 
   public readonly users: Collection<User, string>;
   public readonly downloads: Collection<Download, string>;
-  public readonly uploads: Collection<Upload, string>;
   public readonly nodes: Collection<LocalNode, string>;
   public readonly nodeReactions: Collection<NodeReaction, string>;
 
@@ -33,7 +30,6 @@ export class WorkspaceCollections {
     this.userId = userId;
     this.users = createUsersCollection(userId);
     this.downloads = createDownloadsCollection(userId);
-    this.uploads = createUploadsCollection(userId);
     this.nodes = createNodesCollection(userId);
     this.nodeReactions = createNodeReactionsCollection(userId);
   }
@@ -42,7 +38,6 @@ export class WorkspaceCollections {
     await Promise.all([
       this.users.cleanup(),
       this.downloads.cleanup(),
-      this.uploads.cleanup(),
       this.nodes.cleanup(),
       this.nodeReactions.cleanup(),
     ]);

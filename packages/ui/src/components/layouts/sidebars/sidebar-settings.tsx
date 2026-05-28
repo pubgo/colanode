@@ -1,46 +1,22 @@
-import { count, inArray, useLiveQuery } from '@tanstack/react-db';
 import {
   Download,
   Info,
   LogOut,
   Palette,
   Settings,
-  Upload,
   Users,
 } from 'lucide-react';
 
-import { UploadStatus } from '@colanode/client/types';
 import { SidebarHeader } from '@colanode/ui/components/layouts/sidebars/sidebar-header';
 import { SidebarSettingsItem } from '@colanode/ui/components/layouts/sidebars/sidebar-settings-item';
 import { Link } from '@colanode/ui/components/ui/link';
 import { Separator } from '@colanode/ui/components/ui/separator';
 import { useApp } from '@colanode/ui/contexts/app';
-import { useWorkspace } from '@colanode/ui/contexts/workspace';
 import { isLocalOnlyMode } from '@colanode/ui/routes/utils';
 
 export const SidebarSettings = () => {
   const app = useApp();
-  const workspace = useWorkspace();
   const localOnly = isLocalOnlyMode();
-
-  const pendingUploadsQuery = useLiveQuery(
-    (q) =>
-      q
-        .from({ uploads: workspace.collections.uploads })
-        .where(({ uploads }) =>
-          inArray(uploads.status, [
-            UploadStatus.Pending,
-            UploadStatus.Uploading,
-          ])
-        )
-        .select(({ uploads }) => ({
-          count: count(uploads.fileId),
-        }))
-        .findOne(),
-    [workspace.userId]
-  );
-
-  const pendingUploads = pendingUploadsQuery.data?.count ?? 0;
 
   return (
     <div className="flex flex-col gap-4 h-full px-2 group/sidebar">
@@ -62,21 +38,6 @@ export const SidebarSettings = () => {
               title="Users"
               icon={Users}
               isActive={isActive}
-            />
-          )}
-        </Link>
-        <Link from="/workspace/$userId" to="uploads">
-          {({ isActive }) => (
-            <SidebarSettingsItem
-              title="Uploads"
-              icon={Upload}
-              isActive={isActive}
-              unreadBadge={{
-                count: pendingUploads,
-                unread: pendingUploads > 0,
-                maxCount: 20,
-                className: 'bg-blue-500',
-              }}
             />
           )}
         </Link>

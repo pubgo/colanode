@@ -23,7 +23,6 @@ export * from './users/user-search';
 export * from './workspaces/workspace-list';
 export * from './avatars/avatar-get';
 export * from './records/record-field-value-count';
-export * from './files/upload-list';
 export * from './files/download-list';
 export * from './files/temp-file-list';
 export * from './icons/icon-svg-get';
@@ -33,7 +32,7 @@ export * from './servers/server-list';
 export * from './nodes/node-list';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface QueryMap {}
+export interface QueryMap { }
 
 export type QueryInput = QueryMap[keyof QueryMap]['input'];
 

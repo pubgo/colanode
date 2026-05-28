@@ -9,7 +9,6 @@ import {
   mapNode,
   mapNodeAttributes,
   mapNodeReference,
-  mapUpload,
 } from '@colanode/client/lib/mappers';
 import {
   applyMentionUpdates,
@@ -714,23 +713,10 @@ export class NodeService {
     });
 
     if (deletedNode.type === 'file') {
-      const deletedUpload = await this.workspace.database
+      await this.workspace.database
         .deleteFrom('uploads')
         .where('file_id', '=', deletedNode.id)
-        .returningAll()
-        .executeTakeFirst();
-
-      if (deletedUpload) {
-        eventBus.publish({
-          type: 'upload.deleted',
-          workspace: {
-            workspaceId: this.workspace.workspaceId,
-            userId: this.workspace.userId,
-            accountId: this.workspace.accountId,
-          },
-          upload: mapUpload(deletedUpload),
-        });
-      }
+        .execute();
 
       const updatedDownloads = await this.workspace.database
         .updateTable('downloads')
@@ -1107,23 +1093,10 @@ export class NodeService {
     if (deletedNode.type === 'file') {
       await this.workspace.files.deleteFile(deletedNode);
 
-      const deletedUpload = await this.workspace.database
+      await this.workspace.database
         .deleteFrom('uploads')
         .where('file_id', '=', deletedNode.id)
-        .returningAll()
-        .executeTakeFirst();
-
-      if (deletedUpload) {
-        eventBus.publish({
-          type: 'upload.deleted',
-          workspace: {
-            workspaceId: this.workspace.workspaceId,
-            userId: this.workspace.userId,
-            accountId: this.workspace.accountId,
-          },
-          upload: mapUpload(deletedUpload),
-        });
-      }
+        .execute();
 
       const updatedDownloads = await this.workspace.database
         .updateTable('downloads')

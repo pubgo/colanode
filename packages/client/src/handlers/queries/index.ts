@@ -19,7 +19,6 @@ import { DownloadListQueryHandler } from './files/download-list';
 import { FileDownloadRequestGetQueryHandler } from './files/file-download-request-get';
 import { LocalFileGetQueryHandler } from './files/local-file-get';
 import { TempFileListQueryHandler } from './files/temp-file-list';
-import { UploadListQueryHandler } from './files/upload-list';
 import { IconCategoryListQueryHandler } from './icons/icon-category-list';
 import { IconListQueryHandler } from './icons/icon-list';
 import { IconSearchQueryHandler } from './icons/icon-search';
@@ -64,7 +63,6 @@ export const buildQueryHandlerMap = (app: AppService): QueryHandlerMap => {
     'document.get': new DocumentGetQueryHandler(app),
     'document.state.get': new DocumentStateGetQueryHandler(app),
     'document.updates.list': new DocumentUpdatesListQueryHandler(app),
-    'upload.list': new UploadListQueryHandler(app),
     'download.list': new DownloadListQueryHandler(app),
     'temp.file.list': new TempFileListQueryHandler(app),
     'icon.svg.get': new IconSvgGetQueryHandler(app),

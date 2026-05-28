@@ -8,7 +8,6 @@ import {
 } from '@colanode/client/types/documents';
 import {
   LocalFile,
-  Upload,
   Download,
   TempFile,
 } from '@colanode/client/types/files';
@@ -100,24 +99,6 @@ export type LocalFileDeletedEvent = {
   type: 'local.file.deleted';
   workspace: WorkspaceEventData;
   localFile: LocalFile;
-};
-
-export type UploadCreatedEvent = {
-  type: 'upload.created';
-  workspace: WorkspaceEventData;
-  upload: Upload;
-};
-
-export type UploadUpdatedEvent = {
-  type: 'upload.updated';
-  workspace: WorkspaceEventData;
-  upload: Upload;
-};
-
-export type UploadDeletedEvent = {
-  type: 'upload.deleted';
-  workspace: WorkspaceEventData;
-  upload: Upload;
 };
 
 export type DownloadCreatedEvent = {
@@ -350,9 +331,6 @@ export type Event =
   | LocalFileCreatedEvent
   | LocalFileUpdatedEvent
   | LocalFileDeletedEvent
-  | UploadCreatedEvent
-  | UploadUpdatedEvent
-  | UploadDeletedEvent
   | DownloadCreatedEvent
   | DownloadUpdatedEvent
   | DownloadDeletedEvent
