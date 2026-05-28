@@ -25,6 +25,7 @@ import {
   extractFileSubtype,
   generateId,
   IdType,
+  WorkspaceStatus,
 } from '@colanode/core';
 import { AppBadge } from '@colanode/desktop/main/app-badge';
 import { BootstrapService } from '@colanode/desktop/main/bootstrap';
@@ -33,9 +34,153 @@ import { DesktopKyselyService } from '@colanode/desktop/main/kysely-service';
 import { DesktopPathService } from '@colanode/desktop/main/path-service';
 import { handleLocalRequest } from '@colanode/desktop/main/protocols';
 
+const parseBooleanEnv = (value: string | undefined): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized === '1' ||
+    normalized === 'true' ||
+    normalized === 'yes' ||
+    normalized === 'on'
+  );
+};
+
+const localOnlyMode = parseBooleanEnv(process.env.LOCAL_ONLY);
+
 const appMeta: AppMeta = {
   type: 'desktop',
   platform: process.platform,
+  localOnly: localOnlyMode,
+};
+
+const LOCAL_SERVER_DOMAIN = 'local.colanode';
+const LOCAL_SERVER_NAME = 'Local Desktop';
+const LOCAL_ACCOUNT_EMAIL = 'local@colanode.local';
+const LOCAL_ACCOUNT_NAME = 'Local User';
+const LOCAL_WORKSPACE_NAME = 'My Workspace';
+
+const ensureLocalOnlyBootstrap = async (app: AppService): Promise<void> => {
+  const now = new Date().toISOString();
+
+  let serverRow = await app.database
+    .selectFrom('servers')
+    .selectAll()
+    .where('domain', '=', LOCAL_SERVER_DOMAIN)
+    .executeTakeFirst();
+
+  if (!serverRow) {
+    serverRow = await app.database
+      .insertInto('servers')
+      .returningAll()
+      .values({
+        domain: LOCAL_SERVER_DOMAIN,
+        name: LOCAL_SERVER_NAME,
+        avatar: '',
+        attributes: JSON.stringify({
+          insecure: true,
+          localOnly: true,
+        }),
+        version: build.version,
+        created_at: now,
+        synced_at: now,
+      })
+      .executeTakeFirst();
+  }
+
+  if (!serverRow) {
+    throw new Error('Failed to initialize local-only server record');
+  }
+
+  await app.initServer(serverRow);
+
+  let accountRow = await app.database
+    .selectFrom('accounts')
+    .selectAll()
+    .where('server', '=', LOCAL_SERVER_DOMAIN)
+    .orderBy('created_at', 'asc')
+    .executeTakeFirst();
+
+  if (!accountRow) {
+    accountRow = await app.database
+      .insertInto('accounts')
+      .returningAll()
+      .values({
+        id: generateId(IdType.Account),
+        server: LOCAL_SERVER_DOMAIN,
+        name: LOCAL_ACCOUNT_NAME,
+        email: LOCAL_ACCOUNT_EMAIL,
+        avatar: null,
+        token: 'local-only',
+        device_id: generateId(IdType.Device),
+        created_at: now,
+        updated_at: now,
+        synced_at: now,
+      })
+      .executeTakeFirst();
+  }
+
+  if (!accountRow) {
+    throw new Error('Failed to initialize local-only account record');
+  }
+
+  await app.initAccount({
+    id: accountRow.id,
+    server: accountRow.server,
+    name: accountRow.name,
+    email: accountRow.email,
+    avatar: accountRow.avatar,
+    token: accountRow.token,
+    deviceId: accountRow.device_id,
+    createdAt: accountRow.created_at,
+    updatedAt: accountRow.updated_at,
+    syncedAt: accountRow.synced_at,
+  });
+
+  let workspaces = await app.database
+    .selectFrom('workspaces')
+    .selectAll()
+    .where('account_id', '=', accountRow.id)
+    .execute();
+
+  if (workspaces.length === 0) {
+    const createdWorkspace = await app.database
+      .insertInto('workspaces')
+      .returningAll()
+      .values({
+        user_id: generateId(IdType.User),
+        workspace_id: generateId(IdType.Workspace),
+        account_id: accountRow.id,
+        name: LOCAL_WORKSPACE_NAME,
+        description: 'Local-only workspace',
+        avatar: null,
+        role: 'owner',
+        max_file_size: null,
+        created_at: now,
+        updated_at: now,
+        status: WorkspaceStatus.Active,
+      })
+      .executeTakeFirst();
+
+    if (createdWorkspace) {
+      workspaces = [createdWorkspace];
+    }
+  }
+
+  for (const workspace of workspaces) {
+    await app.initWorkspace(workspace);
+  }
+
+  const defaultWorkspace = workspaces[0];
+  if (defaultWorkspace) {
+    await app.metadata.set('app', 'workspace', defaultWorkspace.user_id);
+  }
+
+  debug(
+    `LOCAL_ONLY mode ready with ${workspaces.length} local workspace(s) and account ${accountRow.id}`
+  );
 };
 
 const fileSystem = new DesktopFileSystem();
@@ -186,9 +331,16 @@ const initApp = async (): Promise<AppInitOutput> => {
     await app.metadata.delete('app', 'theme.mode');
   }
 
-  // add default Colanode servers
-  await app.createServer(new URL('https://eu.colanode.com/config'));
-  await app.createServer(new URL('https://us.colanode.com/config'));
+  await app.metadata.set('app', 'mode.localOnly', localOnlyMode);
+
+  if (!localOnlyMode) {
+    // add default Colanode servers
+    await app.createServer(new URL('https://eu.colanode.com/config'));
+    await app.createServer(new URL('https://us.colanode.com/config'));
+  } else {
+    debug('LOCAL_ONLY mode enabled: skipping default remote server bootstrap');
+    await ensureLocalOnlyBootstrap(app);
+  }
 
   return 'success';
 };

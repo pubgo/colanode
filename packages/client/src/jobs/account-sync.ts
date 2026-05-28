@@ -31,6 +31,12 @@ export class AccountSyncJobHandler implements JobHandler<AccountSyncInput> {
   };
 
   public async handleJob(input: AccountSyncInput): Promise<JobOutput> {
+    if (this.app.meta.localOnly) {
+      return {
+        type: 'cancel',
+      };
+    }
+
     const account = this.app.getAccount(input.accountId);
     if (!account) {
       return {

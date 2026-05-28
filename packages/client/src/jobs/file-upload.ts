@@ -60,6 +60,13 @@ export class FileUploadJobHandler implements JobHandler<FileUploadInput> {
       };
     }
 
+    if (this.app.meta.localOnly) {
+      await this.deleteUpload(workspace, input.fileId);
+      return {
+        type: 'cancel',
+      };
+    }
+
     const account = this.app.getAccount(workspace.accountId);
     if (!account) {
       return {

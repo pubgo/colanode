@@ -47,7 +47,7 @@ export class ServerService {
     this.isOutdated = isServerOutdated(server.version);
 
     this.state = {
-      isAvailable: true,
+      isAvailable: !this.app.meta.localOnly,
       lastCheckedAt: new Date(),
       lastCheckedSuccessfullyAt: null,
       count: 0,
@@ -78,6 +78,15 @@ export class ServerService {
   }
 
   public async init(): Promise<void> {
+    if (this.app.meta.localOnly) {
+      eventBus.publish({
+        type: 'server.updated',
+        server: this.server,
+      });
+
+      return;
+    }
+
     const scheduleId = `server.sync.${this.domain}`;
     await this.app.jobs.upsertJobSchedule(
       scheduleId,
@@ -105,11 +114,11 @@ export class ServerService {
         sha: config.sha,
         account: config.account?.google.enabled
           ? {
-              google: {
-                enabled: config.account.google.enabled,
-                clientId: config.account.google.clientId,
-              },
-            }
+            google: {
+              enabled: config.account.google.enabled,
+              clientId: config.account.google.clientId,
+            },
+          }
           : undefined,
       };
 

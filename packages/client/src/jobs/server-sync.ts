@@ -33,6 +33,12 @@ export class ServerSyncJobHandler implements JobHandler<ServerSyncInput> {
   };
 
   public async handleJob(input: ServerSyncInput): Promise<JobOutput> {
+    if (this.app.meta.localOnly) {
+      return {
+        type: 'cancel',
+      };
+    }
+
     const server = this.app.getServer(input.server);
     if (!server) {
       return {

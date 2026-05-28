@@ -31,6 +31,39 @@ export class WorkspaceUpdateMutationHandler implements MutationHandler<Workspace
     }
 
     try {
+      if (this.app.meta.localOnly) {
+        const updatedWorkspace = await this.app.database
+          .updateTable('workspaces')
+          .returningAll()
+          .set({
+            name: input.name,
+            description: input.description,
+            avatar: input.avatar,
+            updated_at: new Date().toISOString(),
+          })
+          .where((eb) => eb.and([eb('user_id', '=', input.userId)]))
+          .executeTakeFirst();
+
+        if (!updatedWorkspace) {
+          throw new MutationError(
+            MutationErrorCode.WorkspaceNotUpdated,
+            'Something went wrong updating local workspace. Please try again later.'
+          );
+        }
+
+        const workspace = mapWorkspace(updatedWorkspace);
+        workspaceService.updateWorkspace(workspace);
+
+        eventBus.publish({
+          type: 'workspace.updated',
+          workspace,
+        });
+
+        return {
+          success: true,
+        };
+      }
+
       const body: WorkspaceUpdateInput = {
         name: input.name,
         description: input.description,

@@ -1,6 +1,10 @@
 import ms from 'ms';
 
-import { SelectDownload, UpdateDownload } from '@colanode/client/databases';
+import {
+  SelectDownload,
+  SelectLocalFile,
+  UpdateDownload,
+} from '@colanode/client/databases';
 import {
   JobHandler,
   JobOutput,
@@ -73,6 +77,23 @@ export class FileDownloadJobHandler implements JobHandler<FileDownloadInput> {
       return {
         type: 'cancel',
       };
+    }
+
+    if (this.app.meta.localOnly) {
+      const localFile = await this.fetchLocalFile(workspace, download.file_id);
+      if (!localFile) {
+        await this.updateDownload(workspace, download.id, {
+          status: DownloadStatus.Failed,
+          error_code: 'local_file_missing',
+          error_message: 'Local file is not available on this device',
+        });
+
+        return {
+          type: 'cancel',
+        };
+      }
+
+      return this.performLocalDownload(workspace, download, localFile);
     }
 
     if (file.status === FileStatus.Pending) {
@@ -162,6 +183,64 @@ export class FileDownloadJobHandler implements JobHandler<FileDownloadInput> {
     }
   }
 
+  private async performLocalDownload(
+    workspace: WorkspaceService,
+    download: SelectDownload,
+    localFile: SelectLocalFile
+  ): Promise<JobOutput> {
+    try {
+      await this.updateDownload(workspace, download.id, {
+        status: DownloadStatus.Downloading,
+        started_at: new Date().toISOString(),
+        progress: 0,
+      });
+
+      await this.app.fs.copy(localFile.path, download.path);
+
+      await this.updateDownload(workspace, download.id, {
+        status: DownloadStatus.Completed,
+        completed_at: new Date().toISOString(),
+        progress: 100,
+        error_code: null,
+        error_message: null,
+      });
+
+      return {
+        type: 'success',
+      };
+    } catch {
+      const newRetries = download.retries + 1;
+
+      if (newRetries >= DOWNLOAD_RETRIES_LIMIT) {
+        await this.updateDownload(workspace, download.id, {
+          status: DownloadStatus.Failed,
+          completed_at: new Date().toISOString(),
+          progress: 0,
+          error_code: 'file_download_failed',
+          error_message:
+            'Failed to copy local file after ' + newRetries + ' retries',
+        });
+
+        return {
+          type: 'cancel',
+        };
+      }
+
+      await this.updateDownload(workspace, download.id, {
+        status: DownloadStatus.Pending,
+        retries: newRetries,
+        started_at: new Date().toISOString(),
+        error_code: null,
+        error_message: null,
+      });
+
+      return {
+        type: 'retry',
+        delay: ms('1 minute'),
+      };
+    }
+  }
+
   private async fetchDownload(
     workspace: WorkspaceService,
     downloadId: string
@@ -188,6 +267,17 @@ export class FileDownloadJobHandler implements JobHandler<FileDownloadInput> {
     }
 
     return mapNode(node) as LocalFileNode;
+  }
+
+  private async fetchLocalFile(
+    workspace: WorkspaceService,
+    fileId: string
+  ): Promise<SelectLocalFile | undefined> {
+    return workspace.database
+      .selectFrom('local_files')
+      .selectAll()
+      .where('id', '=', fileId)
+      .executeTakeFirst();
   }
 
   private async updateDownload(

@@ -29,8 +29,7 @@ declare module '@colanode/client/jobs' {
 const DOWNLOAD_RETRIES_LIMIT = 10;
 
 export class LocalFileDownloadJobHandler
-  implements JobHandler<LocalFileDownloadInput>
-{
+  implements JobHandler<LocalFileDownloadInput> {
   private readonly app: AppService;
 
   constructor(app: AppService) {
@@ -51,13 +50,6 @@ export class LocalFileDownloadJobHandler
       };
     }
 
-    const account = this.app.getAccount(workspace.accountId);
-    if (!account) {
-      return {
-        type: 'cancel',
-      };
-    }
-
     const localFile = await workspace.database
       .selectFrom('local_files')
       .selectAll()
@@ -70,6 +62,36 @@ export class LocalFileDownloadJobHandler
       };
     }
 
+    if (this.app.meta.localOnly) {
+      const fileExists = await this.app.fs.exists(localFile.path);
+
+      if (!fileExists) {
+        await this.updateLocalFile(workspace, localFile.id, {
+          download_status: DownloadStatus.Failed,
+          download_completed_at: new Date().toISOString(),
+          download_progress: 0,
+          download_error_code: 'local_file_missing',
+          download_error_message: 'Local file is not available on this device',
+        });
+
+        return {
+          type: 'cancel',
+        };
+      }
+
+      await this.updateLocalFile(workspace, localFile.id, {
+        download_status: DownloadStatus.Completed,
+        download_completed_at: new Date().toISOString(),
+        download_progress: 100,
+        download_error_code: null,
+        download_error_message: null,
+      });
+
+      return {
+        type: 'success',
+      };
+    }
+
     const file = await this.fetchNode(workspace, input.fileId);
     if (!file) {
       await workspace.database
@@ -77,6 +99,13 @@ export class LocalFileDownloadJobHandler
         .where('id', '=', input.fileId)
         .execute();
 
+      return {
+        type: 'cancel',
+      };
+    }
+
+    const account = this.app.getAccount(workspace.accountId);
+    if (!account) {
       return {
         type: 'cancel',
       };

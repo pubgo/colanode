@@ -21,6 +21,11 @@ export class MutationService {
   }
 
   public async scheduleSync(): Promise<void> {
+    if (this.workspace.account.app.meta.localOnly) {
+      await this.clearLocalOnlyMutations();
+      return;
+    }
+
     await this.workspace.account.app.jobs.addJob(
       {
         type: 'mutations.sync',
@@ -37,6 +42,11 @@ export class MutationService {
   }
 
   public async sync(): Promise<void> {
+    if (this.workspace.account.app.meta.localOnly) {
+      await this.clearLocalOnlyMutations();
+      return;
+    }
+
     try {
       let hasMutations = true;
 
@@ -48,6 +58,10 @@ export class MutationService {
     } catch (error) {
       debug(`Error syncing mutations: ${error}`);
     }
+  }
+
+  private async clearLocalOnlyMutations(): Promise<void> {
+    await this.workspace.database.deleteFrom('mutations').execute();
   }
 
   private async sendMutations(): Promise<boolean> {

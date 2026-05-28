@@ -2,7 +2,7 @@ import { createRoute, redirect } from '@tanstack/react-router';
 
 import { AccountSettingsContainer } from '@colanode/ui/components/accounts/account-settings-container';
 import { AccountSettingsTab } from '@colanode/ui/components/accounts/account-settings-tab';
-import { getWorkspaceUserId } from '@colanode/ui/routes/utils';
+import { getWorkspaceUserId, isLocalOnlyMode } from '@colanode/ui/routes/utils';
 import {
   workspaceRoute,
   workspaceMaskRoute,
@@ -12,6 +12,15 @@ export const accountSettingsRoute = createRoute({
   getParentRoute: () => workspaceRoute,
   path: '/account',
   component: AccountSettingsContainer,
+  beforeLoad: (ctx) => {
+    if (isLocalOnlyMode()) {
+      throw redirect({
+        to: '/workspace/$userId/settings',
+        params: { userId: ctx.params.userId },
+        replace: true,
+      });
+    }
+  },
   context: () => {
     return {
       tab: <AccountSettingsTab />,

@@ -5,6 +5,7 @@ import { buildMetadataKey } from '@colanode/ui/collections/metadata';
 import { WorkspaceCreate } from '@colanode/ui/components/workspaces/workspace-create';
 import { WorkspaceCreateTab } from '@colanode/ui/components/workspaces/workspace-create-tab';
 import { rootRoute } from '@colanode/ui/routes/root';
+import { isLocalOnlyMode } from '@colanode/ui/routes/utils';
 
 const Component = () => {
   const { accountId } = workspaceCreateRoute.useLoaderData();
@@ -18,6 +19,10 @@ export const workspaceCreateRoute = createRoute({
   beforeLoad: () => {
     const accountsCount = collections.accounts.size;
     if (accountsCount === 0) {
+      if (isLocalOnlyMode()) {
+        throw redirect({ to: '/', replace: true });
+      }
+
       throw redirect({ to: '/auth/login', replace: true });
     }
   },

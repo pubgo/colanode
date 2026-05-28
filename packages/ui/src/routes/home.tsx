@@ -1,7 +1,10 @@
 import { createRoute, redirect } from '@tanstack/react-router';
 
 import { rootRoute } from '@colanode/ui/routes/root';
-import { getDefaultWorkspaceUserId } from '@colanode/ui/routes/utils';
+import {
+  getDefaultWorkspaceUserId,
+  isLocalOnlyMode,
+} from '@colanode/ui/routes/utils';
 
 export const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -15,6 +18,10 @@ export const homeRoute = createRoute({
         params: { userId: defaultWorkspaceUserId },
         replace: true,
       });
+    }
+
+    if (isLocalOnlyMode()) {
+      throw redirect({ to: '/create', replace: true });
     }
 
     throw redirect({ to: '/auth/login', replace: true });

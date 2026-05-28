@@ -78,6 +78,13 @@ export class AccountService {
   }
 
   public async init(): Promise<void> {
+    if (this.app.meta.localOnly) {
+      debug(
+        `Skipping account sync/socket initialization for account ${this.account.id} in LOCAL_ONLY mode`
+      );
+      return;
+    }
+
     await this.app.jobs.upsertJobSchedule(
       this.accountSyncJobScheduleId,
       {

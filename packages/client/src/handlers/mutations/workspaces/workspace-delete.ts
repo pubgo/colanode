@@ -9,8 +9,7 @@ import { AppService } from '@colanode/client/services/app-service';
 import { WorkspaceOutput } from '@colanode/core';
 
 export class WorkspaceDeleteMutationHandler
-  implements MutationHandler<WorkspaceDeleteMutationInput>
-{
+  implements MutationHandler<WorkspaceDeleteMutationInput> {
   private readonly app: AppService;
 
   constructor(app: AppService) {
@@ -28,15 +27,24 @@ export class WorkspaceDeleteMutationHandler
       );
     }
 
-    const accountService = this.app.getAccount(workspaceService.accountId);
-    if (!accountService) {
-      throw new MutationError(
-        MutationErrorCode.AccountNotFound,
-        'Account not found or has been logged out.'
-      );
-    }
-
     try {
+      if (this.app.meta.localOnly) {
+        const workspaceId = workspaceService.workspaceId;
+        await workspaceService.delete();
+
+        return {
+          id: workspaceId,
+        };
+      }
+
+      const accountService = this.app.getAccount(workspaceService.accountId);
+      if (!accountService) {
+        throw new MutationError(
+          MutationErrorCode.AccountNotFound,
+          'Account not found or has been logged out.'
+        );
+      }
+
       const response = await accountService.client
         .delete(`v1/workspaces/${workspaceService.workspaceId}`)
         .json<WorkspaceOutput>();

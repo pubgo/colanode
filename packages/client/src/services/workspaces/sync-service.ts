@@ -82,6 +82,10 @@ export class SyncService {
   }
 
   private handleEvent(event: Event): void {
+    if (this.workspace.account.app.meta.localOnly) {
+      return;
+    }
+
     if (
       event.type === 'collaboration.created' &&
       event.workspace.userId === this.workspace.userId
@@ -96,6 +100,10 @@ export class SyncService {
   }
 
   public async init() {
+    if (this.workspace.account.app.meta.localOnly) {
+      return;
+    }
+
     debug(
       `Initializing sync service for workspace ${this.workspace.workspaceId}`
     );

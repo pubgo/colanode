@@ -17,7 +17,10 @@ import {
 import { UnreadBadge } from '@colanode/ui/components/ui/unread-badge';
 import { useRadar } from '@colanode/ui/contexts/radar';
 import { useWorkspace } from '@colanode/ui/contexts/workspace';
-import { getAccountWorkspaceUserId } from '@colanode/ui/routes/utils';
+import {
+  getAccountWorkspaceUserId,
+  isLocalOnlyMode,
+} from '@colanode/ui/routes/utils';
 
 export function SidebarMenuFooter() {
   const workspace = useWorkspace();
@@ -46,6 +49,7 @@ export function SidebarMenuFooter() {
     (acc, curr) => acc + curr.unreadCount,
     0
   );
+  const localOnly = isLocalOnlyMode();
 
   if (!currentAccount) {
     return null;
@@ -121,16 +125,20 @@ export function SidebarMenuFooter() {
           );
         })}
 
-        <DropdownMenuSeparator className="my-1" />
-        <DropdownMenuItem
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-          onClick={() => {
-            navigate({ to: '/auth/login' });
-          }}
-        >
-          <Plus className="size-4" />
-          <p className="font-medium">Add account</p>
-        </DropdownMenuItem>
+        {!localOnly && (
+          <>
+            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuItem
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                navigate({ to: '/auth/login' });
+              }}
+            >
+              <Plus className="size-4" />
+              <p className="font-medium">Add account</p>
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

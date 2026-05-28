@@ -37,6 +37,12 @@ export class TokenDeleteJobHandler implements JobHandler<TokenDeleteInput> {
   }
 
   public async handleJob(input: TokenDeleteInput): Promise<JobOutput> {
+    if (this.app.meta.localOnly) {
+      return {
+        type: 'cancel',
+      };
+    }
+
     const server = this.app.getServer(input.server);
     if (!server) {
       return {

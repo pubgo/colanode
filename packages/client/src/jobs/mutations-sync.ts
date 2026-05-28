@@ -33,6 +33,12 @@ export class MutationsSyncJobHandler implements JobHandler<MutationsSyncInput> {
   };
 
   public async handleJob(input: MutationsSyncInput): Promise<JobOutput> {
+    if (this.app.meta.localOnly) {
+      return {
+        type: 'cancel',
+      };
+    }
+
     const workspace = this.app.getWorkspace(input.userId);
     if (!workspace) {
       return {
