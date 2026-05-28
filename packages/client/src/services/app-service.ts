@@ -3,7 +3,6 @@ import ms from 'ms';
 
 import {
   AppDatabaseSchema,
-  SelectServer,
   SelectWorkspace,
   appDatabaseMigrations,
 } from '@colanode/client/databases/app';
@@ -18,7 +17,6 @@ import { JobService } from '@colanode/client/services/job-service';
 import { KyselyService } from '@colanode/client/services/kysely-service';
 import { MetadataService } from '@colanode/client/services/metadata-service';
 import { PathService } from '@colanode/client/services/path-service';
-import { ServerService } from '@colanode/client/services/server-service';
 import { WorkspaceService } from '@colanode/client/services/workspaces/workspace-service';
 import { Account } from '@colanode/client/types/accounts';
 import {
@@ -31,7 +29,6 @@ import {
 const debug = createDebugger('desktop:service:app');
 
 export class AppService {
-  private readonly servers: Map<string, ServerService> = new Map();
   private readonly accounts: Map<string, AccountService> = new Map();
   private readonly workspaces: Map<string, WorkspaceService> = new Map();
   private readonly eventSubscriptionId: string;
@@ -111,7 +108,6 @@ export class AppService {
 
   public async init(): Promise<void> {
     await this.migrate();
-    await this.initServers();
     await this.initAccounts();
     await this.initWorkspaces();
     await this.fs.makeDirectory(this.path.temp);
@@ -133,17 +129,6 @@ export class AppService {
           })
           .execute();
       }
-    }
-  }
-
-  private async initServers(): Promise<void> {
-    const servers = await this.database
-      .selectFrom('servers')
-      .selectAll()
-      .execute();
-
-    for (const server of servers) {
-      await this.initServer(server);
     }
   }
 
@@ -174,28 +159,11 @@ export class AppService {
       return this.accounts.get(account.id)!;
     }
 
-    const server = this.servers.get(account.server);
-    if (!server) {
-      throw new Error('Server not found');
-    }
-
-    const accountService = new AccountService(account, server, this);
+    const accountService = new AccountService(account, this);
     await accountService.init();
 
     this.accounts.set(account.id, accountService);
     return accountService;
-  }
-
-  public async initServer(server: SelectServer): Promise<ServerService> {
-    if (this.servers.has(server.domain)) {
-      return this.servers.get(server.domain)!;
-    }
-
-    const serverService = new ServerService(this, server);
-    await serverService.init();
-
-    this.servers.set(server.domain, serverService);
-    return serverService;
   }
 
   public async initWorkspace(

@@ -5,7 +5,6 @@ import {
 } from '@colanode/client/lib/mappers';
 import { AccountSocket } from '@colanode/client/services/accounts/account-socket';
 import { AppService } from '@colanode/client/services/app-service';
-import { ServerService } from '@colanode/client/services/server-service';
 import { Account } from '@colanode/client/types/accounts';
 import {
   createDebugger,
@@ -18,7 +17,7 @@ export class AccountService {
   public readonly socket: AccountSocket;
   public readonly app: AppService;
 
-  constructor(account: Account, _server: ServerService, app: AppService) {
+  constructor(account: Account, app: AppService) {
     debug(`Initializing account service for account ${account.id}`);
 
     this.account = account;

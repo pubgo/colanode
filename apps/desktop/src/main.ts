@@ -165,8 +165,6 @@ const ensureLocalOnlyBootstrap = async (app: AppService): Promise<void> => {
     throw new Error('Failed to initialize local-only server record');
   }
 
-  await app.initServer(serverRow);
-
   let accountRow = await app.database
     .selectFrom('accounts')
     .selectAll()
