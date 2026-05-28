@@ -133,6 +133,19 @@ To run Colanode locally in development mode:
    npm run dev
    ```
 
+   To store desktop local data (SQLite databases, workspace files, images, etc.)
+   in a custom directory, set `COLANODE_STORAGE_DIR` before starting the app:
+
+   ```bash
+   COLANODE_STORAGE_DIR=/absolute/path/to/your/local-repo npm run dev --workspace @colanode/desktop
+   ```
+
+   You can also pass a CLI flag:
+
+   ```bash
+   npm run dev --workspace @colanode/desktop -- --colanode-storage-dir=/absolute/path/to/your/local-repo
+   ```
+
 ## Testing
 
 Colanode includes tests for both server and web.

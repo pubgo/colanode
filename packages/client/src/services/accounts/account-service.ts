@@ -1,5 +1,4 @@
 import { KyInstance } from 'ky';
-import ms from 'ms';
 
 import { SelectWorkspace } from '@colanode/client/databases';
 import { eventBus } from '@colanode/client/lib/event-bus';
@@ -18,7 +17,6 @@ import {
   ApiErrorCode,
   ApiErrorOutput,
   createDebugger,
-  Message,
 } from '@colanode/core';
 
 const debug = createDebugger('desktop:service:account');
@@ -29,9 +27,6 @@ export class AccountService {
   public readonly client: KyInstance;
   public readonly app: AppService;
   public readonly server: ServerService;
-
-  private readonly accountSyncJobScheduleId: string;
-  private readonly eventSubscriptionId: string;
 
   constructor(account: Account, server: ServerService, app: AppService) {
     debug(`Initializing account service for account ${account.id}`);
@@ -46,22 +41,6 @@ export class AccountService {
       headers: {
         Authorization: `Bearer ${this.account.token}`,
       },
-    });
-
-    this.accountSyncJobScheduleId = `account.sync.${this.account.id}`;
-    this.eventSubscriptionId = eventBus.subscribe((event) => {
-      if (
-        event.type === 'account.connection.message.received' &&
-        event.accountId === this.account.id
-      ) {
-        this.handleMessage(event.message);
-      } else if (
-        event.type === 'server.availability.changed' &&
-        event.isAvailable &&
-        event.domain === this.server.domain
-      ) {
-        this.app.jobs.triggerJobSchedule(this.accountSyncJobScheduleId);
-      }
     });
   }
 
@@ -84,21 +63,6 @@ export class AccountService {
       );
       return;
     }
-
-    await this.app.jobs.upsertJobSchedule(
-      this.accountSyncJobScheduleId,
-      {
-        type: 'account.sync',
-        accountId: this.account.id,
-      },
-      ms('1 minute'),
-      {
-        deduplication: {
-          key: this.accountSyncJobScheduleId,
-          replace: true,
-        },
-      }
-    );
 
     this.socket.init();
   }
@@ -143,22 +107,7 @@ export class AccountService {
         }
       }
 
-      await this.app.jobs.addJob(
-        {
-          type: 'token.delete',
-          token: this.account.token,
-          server: this.server.domain,
-        },
-        {
-          retries: 10,
-          delay: ms('1 second'),
-        }
-      );
-
-      await this.app.jobs.removeJobSchedule(this.accountSyncJobScheduleId);
-
       this.socket.close();
-      eventBus.unsubscribe(this.eventSubscriptionId);
 
       eventBus.publish({
         type: 'account.deleted',
@@ -166,18 +115,6 @@ export class AccountService {
       });
     } catch (error) {
       debug(`Error logging out of account ${this.account.id}: ${error}`);
-    }
-  }
-
-  private handleMessage(message: Message): void {
-    if (
-      message.type === 'account.updated' ||
-      message.type === 'workspace.deleted' ||
-      message.type === 'workspace.updated' ||
-      message.type === 'user.created' ||
-      message.type === 'user.updated'
-    ) {
-      this.app.jobs.triggerJobSchedule(this.accountSyncJobScheduleId);
     }
   }
 

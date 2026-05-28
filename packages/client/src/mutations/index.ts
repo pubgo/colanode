@@ -33,14 +33,13 @@ export * from './users/users-create';
 export * from './files/temp-file-create';
 export * from './apps/tab-create';
 export * from './apps/tab-update';
-export * from './servers/server-sync';
 export * from './apps/tab-delete';
 export * from './nodes/node-delete';
 export * from './nodes/node-create';
 export * from './nodes/node-update';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface MutationMap {}
+export interface MutationMap { }
 
 export type MutationInput = MutationMap[keyof MutationMap]['input'];
 

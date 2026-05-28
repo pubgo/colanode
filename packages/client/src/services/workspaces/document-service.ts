@@ -175,22 +175,25 @@ export class DocumentService {
         throw new Error('Failed to create document update');
       }
 
-      const createdMutation = await trx
-        .insertInto('mutations')
-        .returningAll()
-        .values({
-          id: generateId(IdType.Mutation),
-          type: 'document.update',
-          data: JSON.stringify({
-            documentId: id,
-            updateId: updateId,
-            data: encodeState(update),
-            createdAt: updatedAt,
-          }),
-          created_at: updatedAt,
-          retries: 0,
-        })
-        .executeTakeFirst();
+      let createdMutation = null;
+      if (!this.workspace.account.app.meta.localOnly) {
+        createdMutation = await trx
+          .insertInto('mutations')
+          .returningAll()
+          .values({
+            id: generateId(IdType.Mutation),
+            type: 'document.update',
+            data: JSON.stringify({
+              documentId: id,
+              updateId: updateId,
+              data: encodeState(update),
+              createdAt: updatedAt,
+            }),
+            created_at: updatedAt,
+            retries: 0,
+          })
+          .executeTakeFirst();
+      }
 
       await trx
         .insertInto('document_texts')
@@ -350,20 +353,23 @@ export class DocumentService {
         createdAt: updatedAt,
       };
 
-      const createdMutation = await trx
-        .insertInto('mutations')
-        .returningAll()
-        .values({
-          id: generateId(IdType.Mutation),
-          type: 'document.update',
-          data: JSON.stringify(mutationData),
-          created_at: updatedAt,
-          retries: 0,
-        })
-        .executeTakeFirst();
+      let createdMutation = null;
+      if (!this.workspace.account.app.meta.localOnly) {
+        createdMutation = await trx
+          .insertInto('mutations')
+          .returningAll()
+          .values({
+            id: generateId(IdType.Mutation),
+            type: 'document.update',
+            data: JSON.stringify(mutationData),
+            created_at: updatedAt,
+            retries: 0,
+          })
+          .executeTakeFirst();
 
-      if (!createdMutation) {
-        throw new Error('Failed to create mutation');
+        if (!createdMutation) {
+          throw new Error('Failed to create mutation');
+        }
       }
 
       await trx
@@ -664,6 +670,10 @@ export class DocumentService {
   }
 
   public async syncServerDocumentUpdate(data: SyncDocumentUpdateData) {
+    if (this.workspace.account.app.meta.localOnly) {
+      return;
+    }
+
     for (let count = 0; count < UPDATE_RETRIES_LIMIT; count++) {
       try {
         const result = await this.trySyncDocumentUpdate(data);

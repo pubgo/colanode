@@ -11,16 +11,10 @@ import {
   JobScheduleStatus,
   JobStatus,
 } from '@colanode/client/jobs';
-import { AccountSyncJobHandler } from '@colanode/client/jobs/account-sync';
 import { AvatarDownloadJobHandler } from '@colanode/client/jobs/avatar-download';
 import { AvatarsCleanJobHandler } from '@colanode/client/jobs/avatars-clean';
 import { FileDownloadJobHandler } from '@colanode/client/jobs/file-download';
-import { FileUploadJobHandler } from '@colanode/client/jobs/file-upload';
-import { LocalFileDownloadJobHandler } from '@colanode/client/jobs/local-file-download';
-import { MutationsSyncJobHandler } from '@colanode/client/jobs/mutations-sync';
-import { ServerSyncJobHandler } from '@colanode/client/jobs/server-sync';
 import { TempFilesCleanJobHandler } from '@colanode/client/jobs/temp-files-clean';
-import { TokenDeleteJobHandler } from '@colanode/client/jobs/token-delete';
 import { WorkspaceFilesCleanJobHandler } from '@colanode/client/jobs/workspace-files-clean';
 import { SleepScheduler } from '@colanode/client/lib/sleep-scheduler';
 import { AppService } from '@colanode/client/services/app-service';
@@ -49,17 +43,11 @@ export class JobService {
     this.app = app;
 
     this.handlerMap = {
-      'token.delete': new TokenDeleteJobHandler(app),
-      'account.sync': new AccountSyncJobHandler(app),
-      'server.sync': new ServerSyncJobHandler(app),
-      'file.upload': new FileUploadJobHandler(app),
       'file.download': new FileDownloadJobHandler(app),
-      'mutations.sync': new MutationsSyncJobHandler(app),
       'temp.files.clean': new TempFilesCleanJobHandler(app),
       'workspace.files.clean': new WorkspaceFilesCleanJobHandler(app),
       'avatar.download': new AvatarDownloadJobHandler(app),
       'avatars.clean': new AvatarsCleanJobHandler(app),
-      'local.file.download': new LocalFileDownloadJobHandler(app),
     };
   }
 

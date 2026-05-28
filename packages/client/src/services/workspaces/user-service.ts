@@ -64,6 +64,10 @@ export class UserService {
   }
 
   public async syncServerUser(user: SyncUserData) {
+    if (this.workspace.account.app.meta.localOnly) {
+      return;
+    }
+
     debug(
       `Syncing server user ${user.id} in workspace ${this.workspace.workspaceId}`
     );

@@ -34,7 +34,6 @@ import { NodeReactionDeleteMutationHandler } from './nodes/node-reaction-delete'
 import { NodeUpdateMutationHandler } from './nodes/node-update';
 import { ServerCreateMutationHandler } from './servers/server-create';
 import { ServerDeleteMutationHandler } from './servers/server-delete';
-import { ServerSyncMutationHandler } from './servers/server-sync';
 import { SpaceChildReorderMutationHandler } from './spaces/space-child-reorder';
 import { UserRoleUpdateMutationHandler } from './users/user-role-update';
 import { UserStorageUpdateMutationHandler } from './users/user-storage-update';
@@ -69,7 +68,6 @@ export const buildMutationHandlerMap = (
     'node.reaction.delete': new NodeReactionDeleteMutationHandler(app),
     'server.create': new ServerCreateMutationHandler(app),
     'server.delete': new ServerDeleteMutationHandler(app),
-    'server.sync': new ServerSyncMutationHandler(app),
     'user.role.update': new UserRoleUpdateMutationHandler(app),
     'users.create': new UsersCreateMutationHandler(app),
     'workspace.create': new WorkspaceCreateMutationHandler(app),

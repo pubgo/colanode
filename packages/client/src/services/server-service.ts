@@ -1,5 +1,4 @@
 import ky from 'ky';
-import ms from 'ms';
 
 import { SelectServer } from '@colanode/client/databases';
 import { FeatureKey, isFeatureSupported } from '@colanode/client/lib';
@@ -87,23 +86,7 @@ export class ServerService {
       return;
     }
 
-    const scheduleId = `server.sync.${this.domain}`;
-    await this.app.jobs.upsertJobSchedule(
-      scheduleId,
-      {
-        type: 'server.sync',
-        server: this.domain,
-      },
-      ms('1 minute'),
-      {
-        deduplication: {
-          key: scheduleId,
-          replace: true,
-        },
-      }
-    );
-
-    await this.app.jobs.triggerJobSchedule(scheduleId);
+    await this.sync();
   }
 
   public async sync(): Promise<boolean> {

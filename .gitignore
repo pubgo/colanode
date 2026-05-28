@@ -200,3 +200,6 @@ expo-env.d.ts
 *.mobileprovision
 /ios
 /android
+
+# Local storage test directory
+/.local-repo-test

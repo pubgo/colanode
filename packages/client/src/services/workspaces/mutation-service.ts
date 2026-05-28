@@ -26,19 +26,7 @@ export class MutationService {
       return;
     }
 
-    await this.workspace.account.app.jobs.addJob(
-      {
-        type: 'mutations.sync',
-        userId: this.workspace.userId,
-      },
-      {
-        deduplication: {
-          key: `mutations.sync.${this.workspace.userId}`,
-          replace: true,
-        },
-        delay: 500,
-      }
-    );
+    await this.sync();
   }
 
   public async sync(): Promise<void> {

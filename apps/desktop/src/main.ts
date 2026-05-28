@@ -61,6 +61,91 @@ const LOCAL_SERVER_NAME = 'Local Desktop';
 const LOCAL_ACCOUNT_EMAIL = 'local@colanode.local';
 const LOCAL_ACCOUNT_NAME = 'Local User';
 const LOCAL_WORKSPACE_NAME = 'My Workspace';
+const STORAGE_DIR_ARG_PREFIX = '--colanode-storage-dir=';
+const STORAGE_CONFIG_FILE = 'storage-config.json';
+const STORAGE_DIR_ENV_KEYS = [
+  'COLANODE_STORAGE_DIR',
+  'COLANODE_REPO_DIR',
+  'COLANODE_DATA_DIR',
+] as const;
+
+const debug = createDebugger('desktop:main');
+
+const toAbsoluteStoragePath = (value: string): string => {
+  return path.isAbsolute(value) ? value : path.resolve(process.cwd(), value);
+};
+
+const storageConfigPath = (): string => {
+  return path.join(electronApp.getPath('appData'), 'Colanode', STORAGE_CONFIG_FILE);
+};
+
+const readPersistedStoragePath = (): string | null => {
+  try {
+    const configPath = storageConfigPath();
+    if (!fs.existsSync(configPath)) {
+      return null;
+    }
+
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as {
+      path?: string;
+    };
+
+    if (!parsed.path || parsed.path.trim().length === 0) {
+      return null;
+    }
+
+    return toAbsoluteStoragePath(parsed.path.trim());
+  } catch {
+    return null;
+  }
+};
+
+const persistStoragePath = async (storagePath: string): Promise<void> => {
+  const configPath = storageConfigPath();
+  await fs.promises.mkdir(path.dirname(configPath), { recursive: true });
+  await fs.promises.writeFile(
+    configPath,
+    JSON.stringify({ path: storagePath }, null, 2),
+    'utf-8'
+  );
+};
+
+const resolveConfiguredStoragePath = (): string | null => {
+  const arg = process.argv.find((value) =>
+    value.startsWith(STORAGE_DIR_ARG_PREFIX)
+  );
+
+  const cliValue = arg?.slice(STORAGE_DIR_ARG_PREFIX.length).trim();
+  const envValue = STORAGE_DIR_ENV_KEYS.map((key) => process.env[key])
+    .find((value) => value && value.trim().length > 0)
+    ?.trim();
+  const persistedValue = readPersistedStoragePath();
+
+  const value =
+    (cliValue && cliValue.length > 0 ? cliValue : null) ??
+    envValue ??
+    persistedValue;
+  if (!value) {
+    return null;
+  }
+
+  return toAbsoluteStoragePath(value);
+};
+
+const configureStoragePath = (): void => {
+  const configuredPath = resolveConfiguredStoragePath();
+  if (!configuredPath) {
+    return;
+  }
+
+  try {
+    fs.mkdirSync(configuredPath, { recursive: true });
+    electronApp.setPath('userData', configuredPath);
+    debug(`Using custom storage directory: ${configuredPath}`);
+  } catch (error) {
+    console.error('Failed to configure custom storage directory:', error);
+  }
+};
 
 const ensureLocalOnlyBootstrap = async (app: AppService): Promise<void> => {
   const now = new Date().toISOString();
@@ -183,6 +268,8 @@ const ensureLocalOnlyBootstrap = async (app: AppService): Promise<void> => {
   );
 };
 
+configureStoragePath();
+
 const fileSystem = new DesktopFileSystem();
 const pathService = new DesktopPathService();
 const kyselyService = new DesktopKyselyService();
@@ -190,8 +277,6 @@ const bootstrap = new BootstrapService(pathService);
 
 let app: AppService | null = null;
 let appBadge: AppBadge | null = null;
-
-const debug = createDebugger('desktop:main');
 
 electronApp.setName('Colanode');
 electronApp.setAppUserModelId('com.colanode.desktop');
@@ -324,6 +409,7 @@ const initApp = async (): Promise<AppInitOutput> => {
 
   await app.metadata.set('app', 'version', bootstrap.version);
   await app.metadata.set('app', 'platform', appMeta.platform);
+  await app.metadata.set('app', 'storage.path', pathService.app);
   await app.metadata.set('app', 'window', bootstrap.window);
   if (bootstrap.theme) {
     await app.metadata.set('app', 'theme.mode', bootstrap.theme);
@@ -504,6 +590,48 @@ ipcMain.handle('open-external-url', (_, url: string) => {
 
 ipcMain.handle('show-item-in-folder', (_, path: string) => {
   shell.showItemInFolder(path);
+});
+
+ipcMain.handle('get-storage-directory', async () => {
+  return pathService.app;
+});
+
+ipcMain.handle('show-storage-directory-dialog', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Select local storage directory',
+    defaultPath: pathService.app,
+    properties: ['openDirectory', 'createDirectory', 'promptToCreate'],
+  });
+
+  if (result.canceled) {
+    return undefined;
+  }
+
+  const selectedPath = result.filePaths[0];
+  if (!selectedPath) {
+    return undefined;
+  }
+
+  return toAbsoluteStoragePath(selectedPath);
+});
+
+ipcMain.handle('set-storage-directory', async (_, storagePath: string) => {
+  const normalizedPath = toAbsoluteStoragePath(storagePath);
+
+  await fs.promises.mkdir(normalizedPath, { recursive: true });
+  await persistStoragePath(normalizedPath);
+
+  if (app) {
+    await app.metadata.set('app', 'storage.path', normalizedPath);
+  }
+
+  const relaunchArgs = [
+    ...process.argv.filter((arg) => !arg.startsWith(STORAGE_DIR_ARG_PREFIX)),
+    `${STORAGE_DIR_ARG_PREFIX}${normalizedPath}`,
+  ];
+
+  electronApp.relaunch({ args: relaunchArgs });
+  electronApp.exit(0);
 });
 
 ipcMain.handle(

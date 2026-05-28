@@ -1,13 +1,10 @@
 import { SettingsIcon } from 'lucide-react';
 import { useState } from 'react';
-import { toast } from 'sonner';
 
 import { Server } from '@colanode/client/types';
 import { ServerAvatar } from '@colanode/ui/components/servers/server-avatar';
 import { ServerDeleteDialog } from '@colanode/ui/components/servers/server-delete-dialog';
 import { ServerSettingsDialog } from '@colanode/ui/components/servers/server-settings-dialog';
-import { Spinner } from '@colanode/ui/components/ui/spinner';
-import { useMutation } from '@colanode/ui/hooks/use-mutation';
 
 interface ServerCardProps {
   server: Server;
@@ -17,23 +14,9 @@ interface ServerCardProps {
 export const ServerCard = ({ server, onSelect }: ServerCardProps) => {
   const [openSettings, setOpenSettings] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
-  const { mutate: syncServer, isPending: isSyncing } = useMutation();
 
   const handleServerClick = () => {
-    if (isSyncing) return;
-
-    syncServer({
-      input: {
-        type: 'server.sync',
-        domain: server.domain,
-      },
-      onSuccess() {
-        onSelect(server);
-      },
-      onError(error) {
-        toast.error(error.message);
-      },
-    });
+    onSelect(server);
   };
 
   return (
@@ -53,18 +36,13 @@ export const ServerCard = ({ server, onSelect }: ServerCardProps) => {
         </div>
         <button
           className="text-muted-foreground opacity-0 group-hover/server:opacity-100 hover:bg-input size-8 flex items-center justify-center rounded-md cursor-pointer disabled:opacity-100"
-          disabled={isSyncing}
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
             setOpenSettings(true);
           }}
         >
-          {isSyncing ? (
-            <Spinner className="size-4" />
-          ) : (
-            <SettingsIcon className="size-4" />
-          )}
+          <SettingsIcon className="size-4" />
         </button>
       </div>
       <ServerSettingsDialog

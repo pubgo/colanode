@@ -64,6 +64,18 @@ contextBridge.exposeInMainWorld('colanode', {
   showFileSaveDialog: async ({ name }: { name: string }) => {
     return ipcRenderer.invoke('show-file-save-dialog', { name });
   },
+
+  getStorageDirectory: async () => {
+    return ipcRenderer.invoke('get-storage-directory');
+  },
+
+  showStorageDirectoryDialog: async () => {
+    return ipcRenderer.invoke('show-storage-directory-dialog');
+  },
+
+  setStorageDirectory: async (path: string) => {
+    return ipcRenderer.invoke('set-storage-directory', path);
+  },
 });
 
 contextBridge.exposeInMainWorld('eventBus', {
