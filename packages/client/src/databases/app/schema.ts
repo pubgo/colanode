@@ -3,20 +3,6 @@ import { ColumnType, Insertable, Selectable, Updateable } from 'kysely';
 import { JobScheduleStatus, JobStatus } from '@colanode/client/jobs';
 import { FileSubtype, WorkspaceRole, WorkspaceStatus } from '@colanode/core';
 
-interface ServerTable {
-  domain: ColumnType<string, string, never>;
-  name: ColumnType<string, string, string>;
-  avatar: ColumnType<string, string, string>;
-  attributes: ColumnType<string, string, string>;
-  version: ColumnType<string, string, string>;
-  created_at: ColumnType<string, string, string>;
-  synced_at: ColumnType<string | null, string | null, string>;
-}
-
-export type SelectServer = Selectable<ServerTable>;
-export type CreateServer = Insertable<ServerTable>;
-export type UpdateServer = Updateable<ServerTable>;
-
 interface MetadataTable {
   namespace: ColumnType<string, string, never>;
   key: ColumnType<string, string, never>;
@@ -31,7 +17,6 @@ export type UpdateMetadata = Updateable<MetadataTable>;
 
 interface AccountTable {
   id: ColumnType<string, string, never>;
-  server: ColumnType<string, string, never>;
   name: ColumnType<string, string, string>;
   email: ColumnType<string, string, never>;
   avatar: ColumnType<string | null, string | null, string | null>;
@@ -142,7 +127,6 @@ export type InsertAvatar = Insertable<AvatarsTable>;
 export type UpdateAvatar = Updateable<AvatarsTable>;
 
 export interface AppDatabaseSchema {
-  servers: ServerTable;
   metadata: MetadataTable;
   accounts: AccountTable;
   workspaces: WorkspacesTable;

@@ -42,8 +42,6 @@ const appMeta: AppMeta = {
   localOnly: localOnlyMode,
 };
 
-const LOCAL_SERVER_DOMAIN = 'local.colanode';
-const LOCAL_SERVER_NAME = 'Local Desktop';
 const LOCAL_ACCOUNT_EMAIL = 'local@colanode.local';
 const LOCAL_ACCOUNT_NAME = 'Local User';
 const LOCAL_WORKSPACE_NAME = 'My Workspace';
@@ -136,39 +134,9 @@ const configureStoragePath = (): void => {
 const ensureLocalOnlyBootstrap = async (app: AppService): Promise<void> => {
   const now = new Date().toISOString();
 
-  let serverRow = await app.database
-    .selectFrom('servers')
-    .selectAll()
-    .where('domain', '=', LOCAL_SERVER_DOMAIN)
-    .executeTakeFirst();
-
-  if (!serverRow) {
-    serverRow = await app.database
-      .insertInto('servers')
-      .returningAll()
-      .values({
-        domain: LOCAL_SERVER_DOMAIN,
-        name: LOCAL_SERVER_NAME,
-        avatar: '',
-        attributes: JSON.stringify({
-          insecure: true,
-          localOnly: true,
-        }),
-        version: build.version,
-        created_at: now,
-        synced_at: now,
-      })
-      .executeTakeFirst();
-  }
-
-  if (!serverRow) {
-    throw new Error('Failed to initialize local-only server record');
-  }
-
   let accountRow = await app.database
     .selectFrom('accounts')
     .selectAll()
-    .where('server', '=', LOCAL_SERVER_DOMAIN)
     .orderBy('created_at', 'asc')
     .executeTakeFirst();
 
@@ -178,7 +146,6 @@ const ensureLocalOnlyBootstrap = async (app: AppService): Promise<void> => {
       .returningAll()
       .values({
         id: generateId(IdType.Account),
-        server: LOCAL_SERVER_DOMAIN,
         name: LOCAL_ACCOUNT_NAME,
         email: LOCAL_ACCOUNT_EMAIL,
         avatar: null,
@@ -197,7 +164,6 @@ const ensureLocalOnlyBootstrap = async (app: AppService): Promise<void> => {
 
   await app.initAccount({
     id: accountRow.id,
-    server: accountRow.server,
     name: accountRow.name,
     email: accountRow.email,
     avatar: accountRow.avatar,

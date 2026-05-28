@@ -127,7 +127,6 @@ export const mapDocumentUpdate = (
 export const mapAccount = (row: SelectAccount): Account => {
   return {
     id: row.id,
-    server: row.server,
     name: row.name,
     avatar: row.avatar,
     deviceId: row.device_id,
