@@ -16,6 +16,10 @@ const hasMacSigningEnv =
   !!process.env.APPLE_TEAM_ID;
 const hasWindowsSigningEnv =
   !!process.env.CERTIFICATE_PATH && !!process.env.CERTIFICATE_PASSWORD;
+const githubRepository = process.env.GITHUB_REPOSITORY?.trim();
+const [githubOwner, githubRepo] = githubRepository?.split('/') ?? [];
+const releaseOwner = githubOwner || 'colanode';
+const releaseRepo = githubRepo || 'colanode';
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -30,7 +34,7 @@ const config: ForgeConfig = {
     ...(process.platform === 'darwin' && !isLocalOnly && hasMacSigningEnv && {
       osxSign: {
         type: 'distribution',
-        keychain: process.env.KEYCHAIN,
+        keychain: process.env.KEYCHAIN!,
         optionsForFile: (_) => {
           return {
             hardenedRuntime: true,
@@ -40,10 +44,10 @@ const config: ForgeConfig = {
         },
       },
       osxNotarize: {
-        appleId: process.env.APPLE_ID,
-        appleIdPassword: process.env.APPLE_ID_PASSWORD,
-        teamId: process.env.APPLE_TEAM_ID,
-        keychain: process.env.KEYCHAIN,
+        appleId: process.env.APPLE_ID!,
+        appleIdPassword: process.env.APPLE_ID_PASSWORD!,
+        teamId: process.env.APPLE_TEAM_ID!,
+        keychain: process.env.KEYCHAIN!,
       },
     }),
     asar: true,
@@ -102,8 +106,8 @@ const config: ForgeConfig = {
       name: '@electron-forge/publisher-github',
       config: {
         repository: {
-          owner: 'colanode',
-          name: 'colanode',
+          owner: releaseOwner,
+          name: releaseRepo,
         },
         prerelease: false,
         draft: true,

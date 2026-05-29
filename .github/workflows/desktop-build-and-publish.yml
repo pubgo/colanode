@@ -65,7 +65,7 @@ jobs:
 
       - name: Build Electron App
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASER_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LOCAL_ONLY: true
           NODE_ENV: production
         working-directory: apps/desktop
@@ -122,7 +122,7 @@ jobs:
 
       - name: Publish and Notarize Electron App (macOS Apple Silicon)
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASER_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LOCAL_ONLY: true
           NODE_ENV: production
         working-directory: apps/desktop
@@ -131,7 +131,7 @@ jobs:
 
       - name: Publish and Notarize Electron App (macOS Intel)
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASER_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LOCAL_ONLY: true
           NODE_ENV: production
         working-directory: apps/desktop
