@@ -1,6 +1,5 @@
 import { eventBus } from '@colanode/client/lib/event-bus';
 import {
-  mapAccount,
   mapMetadata,
 } from '@colanode/client/lib/mappers';
 import { AccountSocket } from '@colanode/client/services/accounts/account-socket';
