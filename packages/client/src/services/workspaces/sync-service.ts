@@ -57,7 +57,7 @@ export class SyncService {
 
   constructor(workspaceService: WorkspaceService) {
     this.workspace = workspaceService;
-    this.isLocalOnly = this.workspace.account.app.meta.localOnly;
+    this.isLocalOnly = this.workspace.account.app.meta.localOnly ?? false;
 
     if (this.isLocalOnly) {
       this.syncHandlers = null;
