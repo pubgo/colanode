@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { collections } from '@colanode/ui/collections';
 import { Container } from '@colanode/ui/components/layouts/containers/container';
 import { Separator } from '@colanode/ui/components/ui/separator';
-import { WorkspaceCloud } from '@colanode/ui/components/workspaces/workspace-cloud';
 import { WorkspaceDelete } from '@colanode/ui/components/workspaces/workspace-delete';
 import { WorkspaceForm } from '@colanode/ui/components/workspaces/workspace-form';
 import { WorkspaceNotFound } from '@colanode/ui/components/workspaces/workspace-not-found';
@@ -72,8 +71,6 @@ export const WorkspaceSettingsContainer = () => {
             saveText="Update"
           />
         </div>
-
-        <WorkspaceCloud />
 
         <div className="space-y-6">
           <div>

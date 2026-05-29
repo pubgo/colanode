@@ -1,6 +1,20 @@
 import { collections } from '@colanode/ui/collections';
 import { buildMetadataKey } from '@colanode/ui/collections/metadata';
 
+export const isLocalOnlyMode = () => {
+  const metadataKey = buildMetadataKey('app', 'mode.localOnly');
+  const metadataValue = collections.metadata.get(metadataKey)?.value;
+  if (!metadataValue) {
+    return false;
+  }
+
+  try {
+    return JSON.parse(metadataValue) === true;
+  } catch {
+    return false;
+  }
+};
+
 export const getDefaultWorkspaceUserId = () => {
   const workspaceUserIds = collections.workspaces.map(
     (workspace) => workspace.userId

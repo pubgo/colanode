@@ -1,10 +1,8 @@
-import ky, { KyInstance } from 'ky';
 import { Kysely, Migration, Migrator } from 'kysely';
 import ms from 'ms';
 
 import {
   AppDatabaseSchema,
-  SelectServer,
   SelectWorkspace,
   appDatabaseMigrations,
 } from '@colanode/client/databases/app';
@@ -19,13 +17,9 @@ import { JobService } from '@colanode/client/services/job-service';
 import { KyselyService } from '@colanode/client/services/kysely-service';
 import { MetadataService } from '@colanode/client/services/metadata-service';
 import { PathService } from '@colanode/client/services/path-service';
-import { ServerService } from '@colanode/client/services/server-service';
 import { WorkspaceService } from '@colanode/client/services/workspaces/workspace-service';
 import { Account } from '@colanode/client/types/accounts';
-import { ServerAttributes } from '@colanode/client/types/servers';
 import {
-  ApiHeader,
-  build,
   createDebugger,
   generateFractionalIndex,
   generateId,
@@ -35,7 +29,6 @@ import {
 const debug = createDebugger('desktop:service:app');
 
 export class AppService {
-  private readonly servers: Map<string, ServerService> = new Map();
   private readonly accounts: Map<string, AccountService> = new Map();
   private readonly workspaces: Map<string, WorkspaceService> = new Map();
   private readonly eventSubscriptionId: string;
@@ -49,7 +42,6 @@ export class AppService {
   public readonly mediator: Mediator;
   public readonly assets: AssetService;
   public readonly jobs: JobService;
-  public readonly client: KyInstance;
 
   constructor(
     meta: AppMeta,
@@ -70,15 +62,6 @@ export class AppService {
     this.mediator = new Mediator(this);
     this.assets = new AssetService(this);
     this.jobs = new JobService(this);
-
-    this.client = ky.create({
-      headers: {
-        [ApiHeader.ClientType]: this.meta.type,
-        [ApiHeader.ClientPlatform]: this.meta.platform,
-        [ApiHeader.ClientVersion]: build.version,
-      },
-      timeout: ms('30 seconds'),
-    });
 
     this.metadata = new MetadataService(this);
 
@@ -118,21 +101,13 @@ export class AppService {
     return Array.from(this.accounts.values());
   }
 
-  public getServers(): ServerService[] {
-    return Array.from(this.servers.values());
-  }
-
   public getWorkspaces(): WorkspaceService[] {
     return Array.from(this.workspaces.values());
   }
 
-  public getServer(domain: string): ServerService | null {
-    return this.servers.get(domain) ?? null;
-  }
 
   public async init(): Promise<void> {
     await this.migrate();
-    await this.initServers();
     await this.initAccounts();
     await this.initWorkspaces();
     await this.fs.makeDirectory(this.path.temp);
@@ -154,17 +129,6 @@ export class AppService {
           })
           .execute();
       }
-    }
-  }
-
-  private async initServers(): Promise<void> {
-    const servers = await this.database
-      .selectFrom('servers')
-      .selectAll()
-      .execute();
-
-    for (const server of servers) {
-      await this.initServer(server);
     }
   }
 
@@ -195,28 +159,11 @@ export class AppService {
       return this.accounts.get(account.id)!;
     }
 
-    const server = this.servers.get(account.server);
-    if (!server) {
-      throw new Error('Server not found');
-    }
-
-    const accountService = new AccountService(account, server, this);
+    const accountService = new AccountService(account, this);
     await accountService.init();
 
     this.accounts.set(account.id, accountService);
     return accountService;
-  }
-
-  public async initServer(server: SelectServer): Promise<ServerService> {
-    if (this.servers.has(server.domain)) {
-      return this.servers.get(server.domain)!;
-    }
-
-    const serverService = new ServerService(this, server);
-    await serverService.init();
-
-    this.servers.set(server.domain, serverService);
-    return serverService;
   }
 
   public async initWorkspace(
@@ -239,86 +186,6 @@ export class AppService {
 
     this.workspaces.set(workspace.user_id, workspaceService);
     return workspaceService;
-  }
-
-  public async createServer(url: URL): Promise<ServerService | null> {
-    const domain = url.host;
-    if (this.servers.has(domain)) {
-      return this.servers.get(domain)!;
-    }
-
-    const config = await ServerService.fetchServerConfig(url);
-    if (!config) {
-      return null;
-    }
-
-    const attributes: ServerAttributes = {
-      sha: config.sha,
-      pathPrefix: config.pathPrefix,
-      insecure: url.protocol === 'http:',
-      account: config.account?.google.enabled
-        ? {
-            google: {
-              enabled: config.account.google.enabled,
-              clientId: config.account.google.clientId,
-            },
-          }
-        : undefined,
-    };
-
-    const createdServer = await this.database
-      .insertInto('servers')
-      .values({
-        domain,
-        attributes: JSON.stringify(attributes),
-        avatar: config.avatar,
-        name: config.name,
-        version: config.version,
-        created_at: new Date().toISOString(),
-      })
-      .returningAll()
-      .executeTakeFirst();
-
-    if (!createdServer) {
-      return null;
-    }
-
-    const serverService = await this.initServer(createdServer);
-
-    eventBus.publish({
-      type: 'server.created',
-      server: serverService.server,
-    });
-
-    return serverService;
-  }
-
-  public async deleteServer(domain: string): Promise<void> {
-    const server = this.servers.get(domain);
-    if (!server) {
-      return;
-    }
-
-    for (const account of this.accounts.values()) {
-      if (account.server.domain === domain) {
-        await account.logout();
-      }
-    }
-
-    const deletedServer = await this.database
-      .deleteFrom('servers')
-      .returningAll()
-      .where('domain', '=', domain)
-      .executeTakeFirst();
-
-    this.servers.delete(domain);
-
-    if (deletedServer) {
-      eventBus.publish({
-        type: 'server.deleted',
-        server: server.server,
-      });
-    }
   }
 
   private async initJobSchedules(): Promise<void> {

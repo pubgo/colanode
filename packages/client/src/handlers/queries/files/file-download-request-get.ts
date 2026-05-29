@@ -4,30 +4,15 @@ import {
   FileDownloadRequestGetQueryInput,
   FileDownloadRequestGetQueryOutput,
 } from '@colanode/client/queries/files/file-download-request-get';
-import { ApiHeader, build } from '@colanode/core';
 
 export class FileDownloadRequestGetQueryHandler
   extends WorkspaceQueryHandlerBase
-  implements QueryHandler<FileDownloadRequestGetQueryInput>
-{
+  implements QueryHandler<FileDownloadRequestGetQueryInput> {
   public async handleQuery(
     input: FileDownloadRequestGetQueryInput
   ): Promise<FileDownloadRequestGetQueryOutput | null> {
-    const workspace = this.getWorkspace(input.userId);
-    const baseUrl = workspace.account.server.httpBaseUrl;
-
-    const url = `${baseUrl}/v1/workspaces/${workspace.workspaceId}/files/${input.id}`;
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${workspace.account.token}`,
-      [ApiHeader.ClientType]: this.app.meta.type,
-      [ApiHeader.ClientPlatform]: this.app.meta.platform,
-      [ApiHeader.ClientVersion]: build.version,
-    };
-
-    return {
-      url,
-      headers,
-    };
+    this.getWorkspace(input.userId);
+    return null;
   }
 
   public async checkForChanges(): Promise<

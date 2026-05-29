@@ -1,5 +1,4 @@
 import { eventBus } from '@colanode/client/lib/event-bus';
-import { parseApiError } from '@colanode/client/lib/ky';
 import { mapWorkspace } from '@colanode/client/lib/mappers';
 import { MutationHandler } from '@colanode/client/lib/types';
 import {
@@ -9,8 +8,6 @@ import {
   WorkspaceUpdateMutationOutput,
 } from '@colanode/client/mutations';
 import { AppService } from '@colanode/client/services/app-service';
-import { Workspace } from '@colanode/client/types';
-import { WorkspaceUpdateInput } from '@colanode/core';
 
 export class WorkspaceUpdateMutationHandler implements MutationHandler<WorkspaceUpdateMutationInput> {
   private readonly app: AppService;
@@ -30,52 +27,35 @@ export class WorkspaceUpdateMutationHandler implements MutationHandler<Workspace
       );
     }
 
-    try {
-      const body: WorkspaceUpdateInput = {
+    const updatedWorkspace = await this.app.database
+      .updateTable('workspaces')
+      .returningAll()
+      .set({
         name: input.name,
         description: input.description,
         avatar: input.avatar,
-      };
+        updated_at: new Date().toISOString(),
+      })
+      .where((eb) => eb.and([eb('user_id', '=', input.userId)]))
+      .executeTakeFirst();
 
-      const response = await workspaceService.account.client
-        .patch(`v1/workspaces/${workspaceService.workspace.workspaceId}`, {
-          json: body,
-        })
-        .json<Workspace>();
-
-      const updatedWorkspace = await this.app.database
-        .updateTable('workspaces')
-        .returningAll()
-        .set({
-          name: response.name,
-          description: response.description,
-          avatar: response.avatar,
-          role: response.role,
-        })
-        .where((eb) => eb.and([eb('user_id', '=', input.userId)]))
-        .executeTakeFirst();
-
-      if (!updatedWorkspace) {
-        throw new MutationError(
-          MutationErrorCode.WorkspaceNotUpdated,
-          'Something went wrong updating the workspace. Please try again later.'
-        );
-      }
-
-      const workspace = mapWorkspace(updatedWorkspace);
-      workspaceService.updateWorkspace(workspace);
-
-      eventBus.publish({
-        type: 'workspace.updated',
-        workspace: workspace,
-      });
-
-      return {
-        success: true,
-      };
-    } catch (error) {
-      const apiError = await parseApiError(error);
-      throw new MutationError(MutationErrorCode.ApiError, apiError.message);
+    if (!updatedWorkspace) {
+      throw new MutationError(
+        MutationErrorCode.WorkspaceNotUpdated,
+        'Something went wrong updating local workspace. Please try again later.'
+      );
     }
+
+    const workspace = mapWorkspace(updatedWorkspace);
+    workspaceService.updateWorkspace(workspace);
+
+    eventBus.publish({
+      type: 'workspace.updated',
+      workspace,
+    });
+
+    return {
+      success: true,
+    };
   }
 }

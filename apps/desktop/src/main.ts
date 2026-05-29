@@ -25,6 +25,7 @@ import {
   extractFileSubtype,
   generateId,
   IdType,
+  WorkspaceStatus,
 } from '@colanode/core';
 import { AppBadge } from '@colanode/desktop/main/app-badge';
 import { BootstrapService } from '@colanode/desktop/main/bootstrap';
@@ -33,10 +34,235 @@ import { DesktopKyselyService } from '@colanode/desktop/main/kysely-service';
 import { DesktopPathService } from '@colanode/desktop/main/path-service';
 import { handleLocalRequest } from '@colanode/desktop/main/protocols';
 
+const localOnlyMode = true;
+
 const appMeta: AppMeta = {
   type: 'desktop',
   platform: process.platform,
+  localOnly: localOnlyMode,
 };
+
+const LOCAL_ACCOUNT_EMAIL = 'local@colanode.local';
+const LOCAL_ACCOUNT_NAME = 'Local User';
+const LOCAL_WORKSPACE_NAME = 'My Workspace';
+const STORAGE_DIR_ARG_PREFIX = '--colanode-storage-dir=';
+const STORAGE_CONFIG_FILE = 'storage-config.json';
+const STORAGE_ROOT_DIR_NAME = 'Colanode-Local';
+const STORAGE_DIR_ENV_KEYS = [
+  'COLANODE_STORAGE_DIR',
+  'COLANODE_REPO_DIR',
+  'COLANODE_DATA_DIR',
+] as const;
+
+const debug = createDebugger('desktop:main');
+
+const toAbsoluteStoragePath = (value: string): string => {
+  return path.isAbsolute(value) ? value : path.resolve(process.cwd(), value);
+};
+
+const resolveSudoUserHomePath = (): string | null => {
+  if (process.platform !== 'darwin') {
+    return null;
+  }
+
+  if (typeof process.getuid !== 'function' || process.getuid() !== 0) {
+    return null;
+  }
+
+  const sudoUser = process.env.SUDO_USER?.trim();
+  if (!sudoUser) {
+    return null;
+  }
+
+  const homePath = path.join('/Users', sudoUser);
+  if (!fs.existsSync(homePath)) {
+    return null;
+  }
+
+  return homePath;
+};
+
+const resolvePreferredAppDataPath = (): string => {
+  const sudoUserHomePath = resolveSudoUserHomePath();
+  if (!sudoUserHomePath) {
+    return electronApp.getPath('appData');
+  }
+
+  return path.join(sudoUserHomePath, 'Library', 'Application Support');
+};
+
+const resolveDefaultStoragePath = (): string => {
+  return path.join(resolvePreferredAppDataPath(), STORAGE_ROOT_DIR_NAME);
+};
+
+const storageConfigPath = (): string => {
+  return path.join(
+    resolvePreferredAppDataPath(),
+    STORAGE_ROOT_DIR_NAME,
+    STORAGE_CONFIG_FILE
+  );
+};
+
+const readPersistedStoragePath = (): string | null => {
+  try {
+    const configPath = storageConfigPath();
+    if (!fs.existsSync(configPath)) {
+      return null;
+    }
+
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as {
+      path?: string;
+    };
+
+    if (!parsed.path || parsed.path.trim().length === 0) {
+      return null;
+    }
+
+    return toAbsoluteStoragePath(parsed.path.trim());
+  } catch {
+    return null;
+  }
+};
+
+const persistStoragePath = async (storagePath: string): Promise<void> => {
+  const configPath = storageConfigPath();
+  await fs.promises.mkdir(path.dirname(configPath), { recursive: true });
+  await fs.promises.writeFile(
+    configPath,
+    JSON.stringify({ path: storagePath }, null, 2),
+    'utf-8'
+  );
+};
+
+const resolveConfiguredStoragePath = (): string | null => {
+  const arg = process.argv.find((value) =>
+    value.startsWith(STORAGE_DIR_ARG_PREFIX)
+  );
+
+  const cliValue = arg?.slice(STORAGE_DIR_ARG_PREFIX.length).trim();
+  const envValue = STORAGE_DIR_ENV_KEYS.map((key) => process.env[key])
+    .find((value) => value && value.trim().length > 0)
+    ?.trim();
+  const persistedValue = readPersistedStoragePath();
+
+  const value =
+    (cliValue && cliValue.length > 0 ? cliValue : null) ??
+    envValue ??
+    persistedValue;
+  if (!value) {
+    return null;
+  }
+
+  return toAbsoluteStoragePath(value);
+};
+
+const configureStoragePath = (): void => {
+  const configuredPath = resolveConfiguredStoragePath();
+  const defaultStoragePath = resolveDefaultStoragePath();
+  const finalPath = configuredPath ?? defaultStoragePath;
+
+  try {
+    fs.mkdirSync(finalPath, { recursive: true });
+    electronApp.setPath('userData', finalPath);
+
+    if (configuredPath) {
+      debug(`Using custom storage directory: ${finalPath}`);
+    } else {
+      debug(`Using default storage directory for sudo session: ${finalPath}`);
+    }
+  } catch (error) {
+    console.error('Failed to configure custom storage directory:', error);
+  }
+};
+
+const ensureLocalOnlyBootstrap = async (app: AppService): Promise<void> => {
+  const now = new Date().toISOString();
+
+  let accountRow = await app.database
+    .selectFrom('accounts')
+    .selectAll()
+    .orderBy('created_at', 'asc')
+    .executeTakeFirst();
+
+  if (!accountRow) {
+    accountRow = await app.database
+      .insertInto('accounts')
+      .returningAll()
+      .values({
+        id: generateId(IdType.Account),
+        name: LOCAL_ACCOUNT_NAME,
+        email: LOCAL_ACCOUNT_EMAIL,
+        avatar: null,
+        token: 'local-only',
+        device_id: generateId(IdType.Device),
+        created_at: now,
+        updated_at: now,
+        synced_at: now,
+      })
+      .executeTakeFirst();
+  }
+
+  if (!accountRow) {
+    throw new Error('Failed to initialize local-only account record');
+  }
+
+  await app.initAccount({
+    id: accountRow.id,
+    name: accountRow.name,
+    email: accountRow.email,
+    avatar: accountRow.avatar,
+    token: accountRow.token,
+    deviceId: accountRow.device_id,
+    createdAt: accountRow.created_at,
+    updatedAt: accountRow.updated_at,
+    syncedAt: accountRow.synced_at,
+  });
+
+  let workspaces = await app.database
+    .selectFrom('workspaces')
+    .selectAll()
+    .where('account_id', '=', accountRow.id)
+    .execute();
+
+  if (workspaces.length === 0) {
+    const createdWorkspace = await app.database
+      .insertInto('workspaces')
+      .returningAll()
+      .values({
+        user_id: generateId(IdType.User),
+        workspace_id: generateId(IdType.Workspace),
+        account_id: accountRow.id,
+        name: LOCAL_WORKSPACE_NAME,
+        description: 'Local-only workspace',
+        avatar: null,
+        role: 'owner',
+        max_file_size: null,
+        created_at: now,
+        updated_at: now,
+        status: WorkspaceStatus.Active,
+      })
+      .executeTakeFirst();
+
+    if (createdWorkspace) {
+      workspaces = [createdWorkspace];
+    }
+  }
+
+  for (const workspace of workspaces) {
+    await app.initWorkspace(workspace);
+  }
+
+  const defaultWorkspace = workspaces[0];
+  if (defaultWorkspace) {
+    await app.metadata.set('app', 'workspace', defaultWorkspace.user_id);
+  }
+
+  debug(
+    `LOCAL_ONLY mode ready with ${workspaces.length} local workspace(s) and account ${accountRow.id}`
+  );
+};
+
+configureStoragePath();
 
 const fileSystem = new DesktopFileSystem();
 const pathService = new DesktopPathService();
@@ -45,8 +271,6 @@ const bootstrap = new BootstrapService(pathService);
 
 let app: AppService | null = null;
 let appBadge: AppBadge | null = null;
-
-const debug = createDebugger('desktop:main');
 
 electronApp.setName('Colanode');
 electronApp.setAppUserModelId('com.colanode.desktop');
@@ -179,6 +403,7 @@ const initApp = async (): Promise<AppInitOutput> => {
 
   await app.metadata.set('app', 'version', bootstrap.version);
   await app.metadata.set('app', 'platform', appMeta.platform);
+  await app.metadata.set('app', 'storage.path', pathService.app);
   await app.metadata.set('app', 'window', bootstrap.window);
   if (bootstrap.theme) {
     await app.metadata.set('app', 'theme.mode', bootstrap.theme);
@@ -186,9 +411,10 @@ const initApp = async (): Promise<AppInitOutput> => {
     await app.metadata.delete('app', 'theme.mode');
   }
 
-  // add default Colanode servers
-  await app.createServer(new URL('https://eu.colanode.com/config'));
-  await app.createServer(new URL('https://us.colanode.com/config'));
+  await app.metadata.set('app', 'mode.localOnly', localOnlyMode);
+
+  debug('LOCAL_ONLY mode enabled: skipping default remote server bootstrap');
+  await ensureLocalOnlyBootstrap(app);
 
   return 'success';
 };
@@ -352,6 +578,48 @@ ipcMain.handle('open-external-url', (_, url: string) => {
 
 ipcMain.handle('show-item-in-folder', (_, path: string) => {
   shell.showItemInFolder(path);
+});
+
+ipcMain.handle('get-storage-directory', async () => {
+  return pathService.app;
+});
+
+ipcMain.handle('show-storage-directory-dialog', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Select local storage directory',
+    defaultPath: pathService.app,
+    properties: ['openDirectory', 'createDirectory', 'promptToCreate'],
+  });
+
+  if (result.canceled) {
+    return undefined;
+  }
+
+  const selectedPath = result.filePaths[0];
+  if (!selectedPath) {
+    return undefined;
+  }
+
+  return toAbsoluteStoragePath(selectedPath);
+});
+
+ipcMain.handle('set-storage-directory', async (_, storagePath: string) => {
+  const normalizedPath = toAbsoluteStoragePath(storagePath);
+
+  await fs.promises.mkdir(normalizedPath, { recursive: true });
+  await persistStoragePath(normalizedPath);
+
+  if (app) {
+    await app.metadata.set('app', 'storage.path', normalizedPath);
+  }
+
+  const relaunchArgs = [
+    ...process.argv.filter((arg) => !arg.startsWith(STORAGE_DIR_ARG_PREFIX)),
+    `${STORAGE_DIR_ARG_PREFIX}${normalizedPath}`,
+  ];
+
+  electronApp.relaunch({ args: relaunchArgs });
+  electronApp.exit(0);
 });
 
 ipcMain.handle(

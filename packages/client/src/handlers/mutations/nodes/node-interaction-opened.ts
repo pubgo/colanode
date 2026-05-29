@@ -17,8 +17,7 @@ import {
 
 export class NodeInteractionOpenedMutationHandler
   extends WorkspaceMutationHandlerBase
-  implements MutationHandler<NodeInteractionOpenedMutationInput>
-{
+  implements MutationHandler<NodeInteractionOpenedMutationInput> {
   async handleMutation(
     input: NodeInteractionOpenedMutationInput
   ): Promise<NodeInteractionOpenedMutationOutput> {
@@ -92,17 +91,20 @@ export class NodeInteractionOpenedMutationHandler
           },
         };
 
-        const createdMutation = await trx
-          .insertInto('mutations')
-          .returningAll()
-          .values({
-            id: mutation.id,
-            type: mutation.type,
-            data: JSON.stringify(mutation.data),
-            created_at: mutation.createdAt,
-            retries: 0,
-          })
-          .executeTakeFirst();
+        let createdMutation = null;
+        if (!workspace.account.app.meta.localOnly) {
+          createdMutation = await trx
+            .insertInto('mutations')
+            .returningAll()
+            .values({
+              id: mutation.id,
+              type: mutation.type,
+              data: JSON.stringify(mutation.data),
+              created_at: mutation.createdAt,
+              retries: 0,
+            })
+            .executeTakeFirst();
+        }
 
         return {
           createdInteraction,
@@ -110,7 +112,7 @@ export class NodeInteractionOpenedMutationHandler
         };
       });
 
-    if (!createdInteraction || !createdMutation) {
+    if (!createdInteraction) {
       throw new Error('Failed to create node interaction');
     }
 
@@ -119,7 +121,9 @@ export class NodeInteractionOpenedMutationHandler
       existingInteraction
     );
 
-    workspace.mutations.scheduleSync();
+    if (createdMutation) {
+      workspace.mutations.scheduleSync();
+    }
 
     eventBus.publish({
       type: 'node.interaction.updated',

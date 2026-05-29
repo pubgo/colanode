@@ -1,11 +1,3 @@
-export * from './accounts/account-logout';
-export * from './accounts/account-update';
-export * from './auth/email-login';
-export * from './auth/email-password-reset-complete';
-export * from './auth/email-password-reset-init';
-export * from './auth/email-register';
-export * from './auth/email-verify';
-export * from './auth/google-login';
 export * from './apps/metadata-delete';
 export * from './apps/metadata-update';
 export * from './avatars/avatar-upload';
@@ -21,26 +13,20 @@ export * from './nodes/node-interaction-opened';
 export * from './nodes/node-interaction-seen';
 export * from './nodes/node-reaction-create';
 export * from './nodes/node-reaction-delete';
-export * from './servers/server-create';
-export * from './servers/server-delete';
 export * from './spaces/space-child-reorder';
 export * from './workspaces/workspace-create';
 export * from './workspaces/workspace-delete';
 export * from './workspaces/workspace-update';
-export * from './users/user-role-update';
-export * from './users/user-storage-update';
-export * from './users/users-create';
 export * from './files/temp-file-create';
 export * from './apps/tab-create';
 export * from './apps/tab-update';
-export * from './servers/server-sync';
 export * from './apps/tab-delete';
 export * from './nodes/node-delete';
 export * from './nodes/node-create';
 export * from './nodes/node-update';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface MutationMap {}
+export interface MutationMap { }
 
 export type MutationInput = MutationMap[keyof MutationMap]['input'];
 

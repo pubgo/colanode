@@ -3,13 +3,9 @@ import { WorkspaceService } from '@colanode/client/services/workspaces/workspace
 import {
   createDebugger,
   Mutation,
-  MutationStatus,
-  SyncMutationsInput,
-  SyncMutationsOutput,
 } from '@colanode/core';
 
 const READ_SIZE = 500;
-const BATCH_SIZE = 50;
 
 const debug = createDebugger('desktop:service:mutation');
 
@@ -21,22 +17,20 @@ export class MutationService {
   }
 
   public async scheduleSync(): Promise<void> {
-    await this.workspace.account.app.jobs.addJob(
-      {
-        type: 'mutations.sync',
-        userId: this.workspace.userId,
-      },
-      {
-        deduplication: {
-          key: `mutations.sync.${this.workspace.userId}`,
-          replace: true,
-        },
-        delay: 500,
-      }
-    );
+    if (this.workspace.account.app.meta.localOnly) {
+      await this.clearLocalOnlyMutations();
+      return;
+    }
+
+    await this.sync();
   }
 
   public async sync(): Promise<void> {
+    if (this.workspace.account.app.meta.localOnly) {
+      await this.clearLocalOnlyMutations();
+      return;
+    }
+
     try {
       let hasMutations = true;
 
@@ -50,11 +44,11 @@ export class MutationService {
     }
   }
 
-  private async sendMutations(): Promise<boolean> {
-    if (!this.workspace.account.server.isAvailable) {
-      return false;
-    }
+  private async clearLocalOnlyMutations(): Promise<void> {
+    await this.workspace.database.deleteFrom('mutations').execute();
+  }
 
+  private async sendMutations(): Promise<boolean> {
     const pendingMutations = await this.workspace.database
       .selectFrom('mutations')
       .selectAll()
@@ -81,55 +75,11 @@ export class MutationService {
       `Sending ${pendingMutations.length} local pending mutations for user ${this.workspace.userId}`
     );
 
-    const totalBatches = Math.ceil(validMutations.length / BATCH_SIZE);
-    let currentBatch = 1;
-
-    try {
-      while (validMutations.length > 0) {
-        const batch = validMutations.splice(0, BATCH_SIZE);
-
-        debug(
-          `Sending batch ${currentBatch++} of ${totalBatches} mutations for user ${this.workspace.userId}`
-        );
-
-        const body: SyncMutationsInput = {
-          mutations: batch,
-        };
-
-        const response = await this.workspace.account.client
-          .post(`v1/workspaces/${this.workspace.workspaceId}/mutations`, {
-            json: body,
-          })
-          .json<SyncMutationsOutput>();
-
-        const syncedMutationIds: string[] = [];
-        const unsyncedMutationIds: string[] = [];
-
-        for (const result of response.results) {
-          if (
-            result.status === MutationStatus.OK ||
-            result.status === MutationStatus.CREATED
-          ) {
-            syncedMutationIds.push(result.id);
-          } else {
-            unsyncedMutationIds.push(result.id);
-          }
-        }
-
-        if (syncedMutationIds.length > 0) {
-          await this.deleteMutations(syncedMutationIds, 'synced');
-        }
-
-        if (unsyncedMutationIds.length > 0) {
-          await this.markMutationsAsFailed(unsyncedMutationIds);
-        }
-      }
-    } catch (error) {
-      debug(
-        `Failed to send local pending mutations for user ${this.workspace.userId}: ${error}`
+    if (validMutations.length > 0) {
+      await this.deleteMutations(
+        validMutations.map((mutation) => mutation.id),
+        'remote-sync-disabled'
       );
-
-      return false;
     }
 
     return pendingMutations.length > 0;
@@ -186,18 +136,6 @@ export class MutationService {
 
     await this.workspace.database
       .deleteFrom('mutations')
-      .where('id', 'in', mutationIds)
-      .execute();
-  }
-
-  private async markMutationsAsFailed(mutationIds: string[]): Promise<void> {
-    debug(
-      `Marking ${mutationIds.length} local pending mutations as failed for user ${this.workspace.userId}`
-    );
-
-    await this.workspace.database
-      .updateTable('mutations')
-      .set((eb) => ({ retries: eb('retries', '+', 1) }))
       .where('id', 'in', mutationIds)
       .execute();
   }

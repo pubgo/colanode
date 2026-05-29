@@ -1,17 +1,14 @@
 import { sha256 } from 'js-sha256';
 import ms from 'ms';
 
-import { eventBus } from '@colanode/client/lib/event-bus';
 import { EventLoop } from '@colanode/client/lib/event-loop';
 import { AccountSocket } from '@colanode/client/services/accounts/account-socket';
 import { WorkspaceService } from '@colanode/client/services/workspaces/workspace-service';
 import {
-  SynchronizerOutputMessage,
   SynchronizerInputMessage,
   SynchronizerInput,
   SynchronizerMap,
   createDebugger,
-  Message,
 } from '@colanode/core';
 
 export type SynchronizerStatus = 'idle' | 'waiting' | 'processing';
@@ -25,7 +22,6 @@ export class Synchronizer<TInput extends SynchronizerInput> {
   private readonly connection: AccountSocket;
   private readonly cursorKey: string;
   private readonly eventLoop: EventLoop;
-  private readonly eventSubscriptionId: string;
 
   private readonly processor: (
     data: SynchronizerMap[TInput['type']]['data']
@@ -54,25 +50,6 @@ export class Synchronizer<TInput extends SynchronizerInput> {
       this.ping.bind(this)
     );
 
-    this.eventSubscriptionId = eventBus.subscribe((event) => {
-      if (
-        event.type === 'account.connection.message.received' &&
-        event.accountId === this.workspace.account.id
-      ) {
-        this.handleMessage(event.message);
-      } else if (
-        event.type === 'account.connection.opened' &&
-        event.accountId === this.workspace.account.id
-      ) {
-        this.eventLoop.trigger();
-      } else if (
-        event.type === 'account.connection.closed' &&
-        event.accountId === this.workspace.account.id
-      ) {
-        this.eventLoop.stop();
-      }
-    });
-
     this.eventLoop.start();
   }
 
@@ -89,42 +66,6 @@ export class Synchronizer<TInput extends SynchronizerInput> {
     }
 
     this.initConsumer();
-  }
-
-  private handleMessage(message: Message) {
-    if (message.type === 'synchronizer.output' && message.id === this.id) {
-      this.sync(message as SynchronizerOutputMessage<TInput>);
-    }
-  }
-
-  private async sync(message: SynchronizerOutputMessage<TInput>) {
-    if (message.id !== this.id) {
-      return;
-    }
-
-    if (this.status === 'processing') {
-      return;
-    }
-
-    this.status = 'processing';
-    let lastCursor: string | null = null;
-
-    try {
-      for (const item of message.items) {
-        await this.processor(item.data);
-        lastCursor = item.cursor;
-      }
-    } catch (error) {
-      debug(`Error consuming items: ${error}`);
-    } finally {
-      if (lastCursor !== null) {
-        this.cursor = lastCursor;
-        await this.saveCursor(lastCursor);
-      }
-
-      this.status = 'idle';
-      this.initConsumer();
-    }
   }
 
   private initConsumer() {
@@ -162,26 +103,8 @@ export class Synchronizer<TInput extends SynchronizerInput> {
     return cursor?.value ?? '0';
   }
 
-  private async saveCursor(cursor: string) {
-    await this.workspace.database
-      .insertInto('cursors')
-      .values({
-        key: this.cursorKey,
-        value: cursor,
-        created_at: new Date().toISOString(),
-      })
-      .onConflict((eb) =>
-        eb.column('key').doUpdateSet({
-          value: cursor,
-          updated_at: new Date().toISOString(),
-        })
-      )
-      .execute();
-  }
-
   public destroy() {
     this.eventLoop.stop();
-    eventBus.unsubscribe(this.eventSubscriptionId);
   }
 
   public async delete() {

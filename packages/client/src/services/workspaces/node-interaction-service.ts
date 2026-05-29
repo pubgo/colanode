@@ -15,6 +15,10 @@ export class NodeInteractionService {
   public async syncServerNodeInteraction(
     nodeInteraction: SyncNodeInteractionData
   ) {
+    if (this.workspace.account.app.meta.localOnly) {
+      return;
+    }
+
     const existingNodeInteraction = await this.workspace.database
       .selectFrom('node_interactions')
       .selectAll()

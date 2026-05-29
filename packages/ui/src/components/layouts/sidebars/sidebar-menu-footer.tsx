@@ -1,6 +1,6 @@
 import { useLiveQuery } from '@tanstack/react-db';
 import { useNavigate } from '@tanstack/react-router';
-import { Check, Plus } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useState } from 'react';
 
 import { UnreadState } from '@colanode/client/types';
@@ -122,15 +122,6 @@ export function SidebarMenuFooter() {
         })}
 
         <DropdownMenuSeparator className="my-1" />
-        <DropdownMenuItem
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-          onClick={() => {
-            navigate({ to: '/auth/login' });
-          }}
-        >
-          <Plus className="size-4" />
-          <p className="font-medium">Add account</p>
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

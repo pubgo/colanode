@@ -9,7 +9,6 @@ import {
   mapNode,
   mapNodeAttributes,
   mapNodeReference,
-  mapUpload,
 } from '@colanode/client/lib/mappers';
 import {
   applyMentionUpdates,
@@ -147,20 +146,23 @@ export class NodeService {
           createdAt: createdAt,
         };
 
-        const createdMutation = await trx
-          .insertInto('mutations')
-          .returningAll()
-          .values({
-            id: generateId(IdType.Mutation),
-            type: 'node.create',
-            data: JSON.stringify(mutationData),
-            created_at: createdAt,
-            retries: 0,
-          })
-          .executeTakeFirst();
+        let createdMutation = null;
+        if (!this.workspace.account.app.meta.localOnly) {
+          createdMutation = await trx
+            .insertInto('mutations')
+            .returningAll()
+            .values({
+              id: generateId(IdType.Mutation),
+              type: 'node.create',
+              data: JSON.stringify(mutationData),
+              created_at: createdAt,
+              retries: 0,
+            })
+            .executeTakeFirst();
 
-        if (!createdMutation) {
-          throw new Error('Failed to create mutation');
+          if (!createdMutation) {
+            throw new Error('Failed to create mutation');
+          }
         }
 
         if (nodeText) {
@@ -194,7 +196,7 @@ export class NodeService {
       throw new Error('Failed to create node');
     }
 
-    if (!createdMutation) {
+    if (!createdMutation && !this.workspace.account.app.meta.localOnly) {
       throw new Error('Failed to create mutation');
     }
 
@@ -222,7 +224,9 @@ export class NodeService {
       });
     }
 
-    this.workspace.mutations.scheduleSync();
+    if (createdMutation) {
+      this.workspace.mutations.scheduleSync();
+    }
     return createdNode;
   }
 
@@ -318,20 +322,23 @@ export class NodeService {
           createdAt: createdAt,
         };
 
-        const createdMutation = await trx
-          .insertInto('mutations')
-          .returningAll()
-          .values({
-            id: generateId(IdType.Mutation),
-            type: 'node.create',
-            data: JSON.stringify(mutationData),
-            created_at: createdAt,
-            retries: 0,
-          })
-          .executeTakeFirst();
+        let createdMutation = null;
+        if (!this.workspace.account.app.meta.localOnly) {
+          createdMutation = await trx
+            .insertInto('mutations')
+            .returningAll()
+            .values({
+              id: generateId(IdType.Mutation),
+              type: 'node.create',
+              data: JSON.stringify(mutationData),
+              created_at: createdAt,
+              retries: 0,
+            })
+            .executeTakeFirst();
 
-        if (!createdMutation) {
-          throw new Error('Failed to create mutation');
+          if (!createdMutation) {
+            throw new Error('Failed to create mutation');
+          }
         }
 
         if (nodeText) {
@@ -365,7 +372,7 @@ export class NodeService {
       throw new Error('Failed to create node');
     }
 
-    if (!createdMutation) {
+    if (!createdMutation && !this.workspace.account.app.meta.localOnly) {
       throw new Error('Failed to create mutation');
     }
 
@@ -393,7 +400,9 @@ export class NodeService {
       });
     }
 
-    this.workspace.mutations.scheduleSync();
+    if (createdMutation) {
+      this.workspace.mutations.scheduleSync();
+    }
     return mapNode(createdNode);
   }
 
@@ -520,20 +529,23 @@ export class NodeService {
         createdAt: updatedAt,
       };
 
-      const createdMutation = await trx
-        .insertInto('mutations')
-        .returningAll()
-        .values({
-          id: generateId(IdType.Mutation),
-          type: 'node.update',
-          data: JSON.stringify(mutationData),
-          created_at: updatedAt,
-          retries: 0,
-        })
-        .executeTakeFirst();
+      let createdMutation = null;
+      if (!this.workspace.account.app.meta.localOnly) {
+        createdMutation = await trx
+          .insertInto('mutations')
+          .returningAll()
+          .values({
+            id: generateId(IdType.Mutation),
+            type: 'node.update',
+            data: JSON.stringify(mutationData),
+            created_at: updatedAt,
+            retries: 0,
+          })
+          .executeTakeFirst();
 
-      if (!createdMutation) {
-        throw new Error('Failed to create mutation');
+        if (!createdMutation) {
+          throw new Error('Failed to create mutation');
+        }
       }
 
       if (nodeText) {
@@ -666,22 +678,25 @@ export class NodeService {
           deletedAt: new Date().toISOString(),
         };
 
-        const createdMutation = await trx
-          .insertInto('mutations')
-          .returningAll()
-          .values({
-            id: generateId(IdType.Mutation),
-            type: 'node.delete',
-            data: JSON.stringify(deleteMutationData),
-            created_at: new Date().toISOString(),
-            retries: 0,
-          })
-          .executeTakeFirst();
+        let createdMutation = null;
+        if (!this.workspace.account.app.meta.localOnly) {
+          createdMutation = await trx
+            .insertInto('mutations')
+            .returningAll()
+            .values({
+              id: generateId(IdType.Mutation),
+              type: 'node.delete',
+              data: JSON.stringify(deleteMutationData),
+              created_at: new Date().toISOString(),
+              retries: 0,
+            })
+            .executeTakeFirst();
+        }
 
         return { deletedNode, createdMutation };
       });
 
-    if (!deletedNode || !createdMutation) {
+    if (!deletedNode) {
       return;
     }
 
@@ -698,23 +713,10 @@ export class NodeService {
     });
 
     if (deletedNode.type === 'file') {
-      const deletedUpload = await this.workspace.database
+      await this.workspace.database
         .deleteFrom('uploads')
         .where('file_id', '=', deletedNode.id)
-        .returningAll()
-        .executeTakeFirst();
-
-      if (deletedUpload) {
-        eventBus.publish({
-          type: 'upload.deleted',
-          workspace: {
-            workspaceId: this.workspace.workspaceId,
-            userId: this.workspace.userId,
-            accountId: this.workspace.accountId,
-          },
-          upload: mapUpload(deletedUpload),
-        });
-      }
+        .execute();
 
       const updatedDownloads = await this.workspace.database
         .updateTable('downloads')
@@ -746,10 +748,16 @@ export class NodeService {
       }
     }
 
-    this.workspace.mutations.scheduleSync();
+    if (createdMutation) {
+      this.workspace.mutations.scheduleSync();
+    }
   }
 
   public async syncServerNodeUpdate(update: SyncNodeUpdateData) {
+    if (this.workspace.account.app.meta.localOnly) {
+      return;
+    }
+
     for (let count = 0; count < UPDATE_RETRIES_LIMIT; count++) {
       try {
         const existingNode = await this.workspace.database
@@ -1048,6 +1056,10 @@ export class NodeService {
   }
 
   public async syncServerNodeDelete(tombstone: SyncNodeTombstoneData) {
+    if (this.workspace.account.app.meta.localOnly) {
+      return;
+    }
+
     debug(
       `Applying server delete transaction ${tombstone.id} for node ${tombstone.id}`
     );
@@ -1081,23 +1093,10 @@ export class NodeService {
     if (deletedNode.type === 'file') {
       await this.workspace.files.deleteFile(deletedNode);
 
-      const deletedUpload = await this.workspace.database
+      await this.workspace.database
         .deleteFrom('uploads')
         .where('file_id', '=', deletedNode.id)
-        .returningAll()
-        .executeTakeFirst();
-
-      if (deletedUpload) {
-        eventBus.publish({
-          type: 'upload.deleted',
-          workspace: {
-            workspaceId: this.workspace.workspaceId,
-            userId: this.workspace.userId,
-            accountId: this.workspace.accountId,
-          },
-          upload: mapUpload(deletedUpload),
-        });
-      }
+        .execute();
 
       const updatedDownloads = await this.workspace.database
         .updateTable('downloads')

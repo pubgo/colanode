@@ -6,7 +6,6 @@ export const createAccountsTable: Migration = {
       .createTable('accounts')
       .addColumn('id', 'text', (col) => col.notNull().primaryKey())
       .addColumn('device_id', 'text', (col) => col.notNull())
-      .addColumn('server', 'text', (col) => col.notNull())
       .addColumn('name', 'text', (col) => col.notNull())
       .addColumn('email', 'text', (col) => col.notNull())
       .addColumn('avatar', 'text')

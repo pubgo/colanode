@@ -14,7 +14,7 @@
 
 # Colanode
 
-### Open-source & local-first collaboration workspace that you can self-host
+### Open-source & local-first collaboration workspace for desktop and web
 
 Colanode is an all-in-one platform for easy collaboration, built to prioritize your data privacy and control. Designed with a **local-first** approach, it helps teams communicate, organize, and manage projects—whether online or offline. With Colanode, you get the flexibility of modern collaboration tools, plus the peace of mind that comes from owning your data.
 
@@ -31,48 +31,17 @@ Built for both individuals and teams, Colanode adapts to your needs, whether you
 
 ## How it works
 
-Colanode includes a client app (web or desktop) and a self-hosted server. You can connect to multiple servers with a single app, each containing one or more **workspaces** for different teams or projects. After logging in, you pick a workspace to start collaborating—sending messages, editing pages, or updating database records.
+This branch focuses on a local-first client workflow. Data is stored on-device and used directly by the desktop/web clients so you can collaborate locally without requiring a remote server runtime.
 
 ### Local-first workflow
 
-All changes you make are saved to a local SQLite database first and then synced to the server. A background process handles this synchronization so you can keep working even if your computer or the server goes offline. Data reads also happen locally, ensuring immediate access to any content you have permissions to view.
+All changes you make are saved to a local SQLite database first. Reads also happen locally, ensuring immediate access to any content you have permissions to view and smooth offline usage.
 
 ### Concurrent edits
 
 Colanode relies on **Conflict-free Replicated Data Types (CRDTs)** - powered by [Yjs](https://docs.yjs.dev/) - to allow real-time collaboration on entries like pages or database records. This means multiple people can edit at the same time, and the system gracefully merges everyone's updates. Deletions are also tracked as specialized transactions. Messages and file operations don't support concurrent edits and use simpler database tables.
 
-## Get started for free
-
-The easiest way to start using Colanode is through our **web app**, accessible instantly at [app.colanode.com](https://app.colanode.com). Simply log in to get started immediately, without any installation. _Please note, the web app is currently in early preview and under testing; you may encounter bugs or compatibility issues in certain browsers._
-
-For optimal performance, you can install our **desktop app**, available from our [downloads page](https://colanode.com/downloads). Both the web and desktop apps allow you to connect to any of our free beta cloud servers:
-
-- **Colanode Cloud (EU)** – hosted in Europe.
-- **Colanode Cloud (US)** – hosted in the United States.
-
-Both cloud servers are currently available in beta and free to use; pricing details will be announced soon.
-
-### Self-host
-
-If you prefer to host your own Colanode server, check out the [`hosting/`](hosting/) folder which contains the Docker Compose file and deployment configurations. For Kubernetes deployments, see the [`hosting/kubernetes/`](hosting/kubernetes/) folder which includes Helm charts and additional documentation. Here's what you need to run Colanode yourself:
-
-- **Postgres** with the **pgvector** extension.
-- **Redis** (any Redis-compatible service will work, e.g., Valkey).
-- **Storage backend** for user files. Colanode defaults to local filesystem storage, but you can switch to **S3-compatible**, **Google Cloud Storage**, or **Azure Blob Storage** backends by setting `STORAGE_TYPE`.
-- **Colanode server API**, provided as a Docker image.
-
-#### Configuration model
-
-- The server image now ships with a full `config.json`, so most defaults are ready to go without touching env vars.
-- The config file is the single source of truth. Use `env://VAR_NAME` to pull sensitive values from env vars, or `file://path/to/secret.pem` to inline the contents of a mounted file (append `?` to make either optional). Only `POSTGRES_URL` and `REDIS_URL` are required out of the box.
-- To customize settings:
-  1. Copy `apps/server/config.json`, edit it, and mount/bind it when using Docker Compose (see `hosting/docker/docker-compose.yaml`).
-  2. For Helm, enable `colanode.configFile.enabled` and pass your file via `--set-file colanode.configFile.data=./config.json` (details in [`hosting/kubernetes/README.md`](hosting/kubernetes/README.md)).
-  3. Keep secrets as env vars so you don't have to bake them into JSON; the loader resolves `env://` pointers at runtime.
-
-Environment variables no longer override regular config fields—only values explicitly tagged with `env://` are read from the environment. Refer to [`hosting/docker/docker-compose.yaml`](hosting/docker/docker-compose.yaml) and [`hosting/kubernetes/README.md`](hosting/kubernetes/README.md) for mounting instructions and the handful of required secrets.
-
-### Running locally
+## Running locally
 
 To run Colanode locally in development mode:
 
@@ -91,34 +60,6 @@ To run Colanode locally in development mode:
 
 3. Start the apps you want to run locally:
 
-   **Server**
-
-   ```bash
-   cd apps/server
-
-   # Copy the environment variable template and adjust values as needed
-   cp .env.example .env
-
-   npm run dev
-   ```
-
-   To spin up the local dependencies (Postgres, Redis, and Mail server) with Docker Compose—using filesystem storage
-   by default—run this from
-   the project root:
-
-   ```bash
-   docker compose -f hosting/docker/docker-compose.yaml up -d
-   ```
-
-   When you prefer an S3-compatible backend locally, enable the optional MinIO service with the `s3` profile:
-
-   ```bash
-   docker compose -f hosting/docker/docker-compose.yaml --profile s3 up -d
-   ```
-
-   The compose file includes a `server` service. When you want to run the API locally with `npm run dev`, comment
-   out (or override) that service so only the supporting services are started.
-
    **Web**
 
    ```bash
@@ -133,19 +74,22 @@ To run Colanode locally in development mode:
    npm run dev
    ```
 
+   To store desktop local data (SQLite databases, workspace files, images, etc.)
+   in a custom directory, set `COLANODE_STORAGE_DIR` before starting the app:
+
+   ```bash
+   COLANODE_STORAGE_DIR=/absolute/path/to/your/local-repo npm run dev --workspace @colanode/desktop
+   ```
+
+   You can also pass a CLI flag:
+
+   ```bash
+   npm run dev --workspace @colanode/desktop -- --colanode-storage-dir=/absolute/path/to/your/local-repo
+   ```
+
 ## Testing
 
-Colanode includes tests for both server and web.
-
-### Server tests
-
-From `apps/server`:
-
-```bash
-npm run test
-```
-
-Server tests use Testcontainers for Postgres and Redis, so Docker must be running. See [`apps/server/README.md`](apps/server/README.md) for details.
+Colanode includes tests for web.
 
 ### Web tests
 

@@ -35,6 +35,10 @@ export class CollaborationService {
   }
 
   public async syncServerCollaboration(collaboration: SyncCollaborationData) {
+    if (this.workspace.account.app.meta.localOnly) {
+      return;
+    }
+
     debug(
       `Applying server collaboration: ${collaboration.nodeId} for workspace ${this.workspace.workspaceId}`
     );

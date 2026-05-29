@@ -20,7 +20,6 @@ import {
   SelectNodeReference,
   SelectLocalFile,
   SelectDownload,
-  SelectUpload,
 } from '@colanode/client/databases/workspace';
 import { Account } from '@colanode/client/types/accounts';
 import { Metadata, Tab } from '@colanode/client/types/apps';
@@ -34,7 +33,6 @@ import { Emoji } from '@colanode/client/types/emojis';
 import {
   LocalFile,
   Download,
-  Upload,
   TempFile,
 } from '@colanode/client/types/files';
 import { Icon } from '@colanode/client/types/icons';
@@ -129,7 +127,6 @@ export const mapDocumentUpdate = (
 export const mapAccount = (row: SelectAccount): Account => {
   return {
     id: row.id,
-    server: row.server,
     name: row.name,
     avatar: row.avatar,
     deviceId: row.device_id,
@@ -231,19 +228,6 @@ export const mapDownload = (row: SelectDownload): Download => {
     path: row.path,
     size: row.size,
     mimeType: row.mime_type,
-    status: row.status,
-    progress: row.progress,
-    retries: row.retries,
-    createdAt: row.created_at,
-    completedAt: row.completed_at,
-    errorCode: row.error_code,
-    errorMessage: row.error_message,
-  };
-};
-
-export const mapUpload = (row: SelectUpload): Upload => {
-  return {
-    fileId: row.file_id,
     status: row.status,
     progress: row.progress,
     retries: row.retries,

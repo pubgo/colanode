@@ -1,6 +1,10 @@
 import ms from 'ms';
 
-import { SelectDownload, UpdateDownload } from '@colanode/client/databases';
+import {
+  SelectDownload,
+  SelectLocalFile,
+  UpdateDownload,
+} from '@colanode/client/databases';
 import {
   JobHandler,
   JobOutput,
@@ -75,6 +79,23 @@ export class FileDownloadJobHandler implements JobHandler<FileDownloadInput> {
       };
     }
 
+    if (this.app.meta.localOnly) {
+      const localFile = await this.fetchLocalFile(workspace, download.file_id);
+      if (!localFile) {
+        await this.updateDownload(workspace, download.id, {
+          status: DownloadStatus.Failed,
+          error_code: 'local_file_missing',
+          error_message: 'Local file is not available on this device',
+        });
+
+        return {
+          type: 'cancel',
+        };
+      }
+
+      return this.performLocalDownload(workspace, download, localFile);
+    }
+
     if (file.status === FileStatus.Pending) {
       return {
         type: 'retry',
@@ -82,41 +103,37 @@ export class FileDownloadJobHandler implements JobHandler<FileDownloadInput> {
       };
     }
 
-    if (!account.server.isAvailable) {
-      return {
-        type: 'retry',
-        delay: ms('5 seconds'),
-      };
+    const localFile = await this.fetchLocalFile(workspace, file.id);
+    if (localFile) {
+      return this.performLocalDownload(workspace, download, localFile);
     }
 
-    return this.performDownload(workspace, download, file);
+    await this.updateDownload(workspace, download.id, {
+      status: DownloadStatus.Failed,
+      completed_at: new Date().toISOString(),
+      progress: 0,
+      error_code: 'remote_download_disabled',
+      error_message: 'Remote file download has been disabled in local mode',
+    });
+
+    return {
+      type: 'cancel',
+    };
   }
 
-  private async performDownload(
+  private async performLocalDownload(
     workspace: WorkspaceService,
     download: SelectDownload,
-    file: LocalFileNode
+    localFile: SelectLocalFile
   ): Promise<JobOutput> {
     try {
       await this.updateDownload(workspace, download.id, {
         status: DownloadStatus.Downloading,
         started_at: new Date().toISOString(),
+        progress: 0,
       });
 
-      const response = await workspace.account.client.get(
-        `v1/workspaces/${workspace.workspaceId}/files/${file.id}`,
-        {
-          onDownloadProgress: async (progress, _chunk) => {
-            const percentage = Math.round((progress.percent || 0) * 100);
-            await this.updateDownload(workspace, download.id, {
-              progress: percentage,
-            });
-          },
-        }
-      );
-
-      const writeStream = await this.app.fs.writeStream(download.path);
-      await response.body?.pipeTo(writeStream);
+      await this.app.fs.copy(localFile.path, download.path);
 
       await this.updateDownload(workspace, download.id, {
         status: DownloadStatus.Completed,
@@ -139,7 +156,7 @@ export class FileDownloadJobHandler implements JobHandler<FileDownloadInput> {
           progress: 0,
           error_code: 'file_download_failed',
           error_message:
-            'Failed to download file after ' + newRetries + ' retries',
+            'Failed to copy local file after ' + newRetries + ' retries',
         });
 
         return {
@@ -188,6 +205,17 @@ export class FileDownloadJobHandler implements JobHandler<FileDownloadInput> {
     }
 
     return mapNode(node) as LocalFileNode;
+  }
+
+  private async fetchLocalFile(
+    workspace: WorkspaceService,
+    fileId: string
+  ): Promise<SelectLocalFile | undefined> {
+    return workspace.database
+      .selectFrom('local_files')
+      .selectAll()
+      .where('id', '=', fileId)
+      .executeTakeFirst();
   }
 
   private async updateDownload(

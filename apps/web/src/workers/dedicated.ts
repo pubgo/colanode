@@ -14,7 +14,6 @@ import {
   extractFileSubtype,
   generateId,
   IdType,
-  isColanodeDomain,
 } from '@colanode/core';
 import {
   BroadcastInitMessage,
@@ -78,12 +77,6 @@ navigator.locks.request('colanode', async () => {
   await app.metadata.set('app', 'version', build.version);
   await app.metadata.set('app', 'platform', appMeta.platform);
 
-  const domain = self.location.hostname;
-  if (isColanodeDomain(domain)) {
-    await app.createServer(new URL('https://eu.colanode.com/config'));
-    await app.createServer(new URL('https://us.colanode.com/config'));
-  }
-
   appInitOutput = 'success';
 
   broadcastMessage({
@@ -126,7 +119,7 @@ navigator.locks.request('colanode', async () => {
     });
   });
 
-  await new Promise(() => {});
+  await new Promise(() => { });
 });
 
 const broadcastMessage = (message: BroadcastMessage) => {

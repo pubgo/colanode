@@ -109,17 +109,20 @@ export class NodeReactionService {
           },
         };
 
-        const createdMutation = await trx
-          .insertInto('mutations')
-          .returningAll()
-          .values({
-            id: mutation.id,
-            type: mutation.type,
-            data: JSON.stringify(mutation.data),
-            created_at: mutation.createdAt,
-            retries: 0,
-          })
-          .executeTakeFirst();
+        let createdMutation = null;
+        if (!this.workspace.account.app.meta.localOnly) {
+          createdMutation = await trx
+            .insertInto('mutations')
+            .returningAll()
+            .values({
+              id: mutation.id,
+              type: mutation.type,
+              data: JSON.stringify(mutation.data),
+              created_at: mutation.createdAt,
+              retries: 0,
+            })
+            .executeTakeFirst();
+        }
 
         await trx
           .deleteFrom('tombstones')
@@ -132,11 +135,13 @@ export class NodeReactionService {
         };
       });
 
-    if (!createdNodeReaction || !createdMutation) {
+    if (!createdNodeReaction) {
       throw new Error('Failed to create node reaction');
     }
 
-    this.workspace.mutations.scheduleSync();
+    if (createdMutation) {
+      this.workspace.mutations.scheduleSync();
+    }
 
     eventBus.publish({
       type: 'node.reaction.created',
@@ -191,20 +196,23 @@ export class NodeReactionService {
           },
         };
 
-        const createdMutation = await trx
-          .insertInto('mutations')
-          .returningAll()
-          .values({
-            id: mutation.id,
-            type: mutation.type,
-            data: JSON.stringify(mutation.data),
-            created_at: mutation.createdAt,
-            retries: 0,
-          })
-          .executeTakeFirst();
+        let createdMutation = null;
+        if (!this.workspace.account.app.meta.localOnly) {
+          createdMutation = await trx
+            .insertInto('mutations')
+            .returningAll()
+            .values({
+              id: mutation.id,
+              type: mutation.type,
+              data: JSON.stringify(mutation.data),
+              created_at: mutation.createdAt,
+              retries: 0,
+            })
+            .executeTakeFirst();
 
-        if (!createdMutation) {
-          throw new Error('Failed to create node reaction mutation');
+          if (!createdMutation) {
+            throw new Error('Failed to create node reaction mutation');
+          }
         }
 
         await trx
@@ -222,11 +230,13 @@ export class NodeReactionService {
         };
       });
 
-    if (!deletedNodeReaction || !createdMutation) {
+    if (!deletedNodeReaction) {
       throw new Error('Failed to delete node reaction');
     }
 
-    this.workspace.mutations.scheduleSync();
+    if (createdMutation) {
+      this.workspace.mutations.scheduleSync();
+    }
 
     eventBus.publish({
       type: 'node.reaction.deleted',
@@ -240,6 +250,10 @@ export class NodeReactionService {
   }
 
   public async syncServerNodeReaction(nodeReaction: SyncNodeReactionData) {
+    if (this.workspace.account.app.meta.localOnly) {
+      return;
+    }
+
     if (nodeReaction.deletedAt) {
       const deletedNodeReaction = await this.workspace.database
         .deleteFrom('node_reactions')

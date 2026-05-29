@@ -42,11 +42,13 @@ const debug = createDebugger('desktop:service:sync');
 
 export class SyncService {
   private readonly workspace: WorkspaceService;
+  private readonly isLocalOnly: boolean;
+  private readonly eventSubscriptionId: string | null;
 
   private readonly rootSynchronizers: Map<string, RootSynchronizers> =
     new Map();
 
-  private readonly syncHandlers: SyncHandlers;
+  private readonly syncHandlers: SyncHandlers | null;
 
   private userSynchronizer: Synchronizer<SyncUsersInput> | undefined;
   private collaborationSynchronizer:
@@ -55,6 +57,14 @@ export class SyncService {
 
   constructor(workspaceService: WorkspaceService) {
     this.workspace = workspaceService;
+    this.isLocalOnly = this.workspace.account.app.meta.localOnly ?? false;
+
+    if (this.isLocalOnly) {
+      this.syncHandlers = null;
+      this.eventSubscriptionId = null;
+      return;
+    }
+
     this.syncHandlers = {
       users: this.workspace.users.syncServerUser.bind(this.workspace.users),
       collaborations:
@@ -66,10 +76,10 @@ export class SyncService {
       ),
       nodeInteractions:
         this.workspace.nodeInteractions.syncServerNodeInteraction.bind(
-          this.workspace.nodes
+          this.workspace.nodeInteractions
         ),
       nodeReactions: this.workspace.nodeReactions.syncServerNodeReaction.bind(
-        this.workspace.nodes
+        this.workspace.nodeReactions
       ),
       nodeTombstones: this.workspace.nodes.syncServerNodeDelete.bind(
         this.workspace.nodes
@@ -78,10 +88,14 @@ export class SyncService {
         this.workspace.documents
       ),
     };
-    eventBus.subscribe(this.handleEvent.bind(this));
+    this.eventSubscriptionId = eventBus.subscribe(this.handleEvent.bind(this));
   }
 
   private handleEvent(event: Event): void {
+    if (this.isLocalOnly) {
+      return;
+    }
+
     if (
       event.type === 'collaboration.created' &&
       event.workspace.userId === this.workspace.userId
@@ -96,6 +110,10 @@ export class SyncService {
   }
 
   public async init() {
+    if (this.isLocalOnly || !this.syncHandlers) {
+      return;
+    }
+
     debug(
       `Initializing sync service for workspace ${this.workspace.workspaceId}`
     );
@@ -131,6 +149,10 @@ export class SyncService {
   }
 
   public destroy(): void {
+    if (this.eventSubscriptionId) {
+      eventBus.unsubscribe(this.eventSubscriptionId);
+    }
+
     this.userSynchronizer?.destroy();
     this.collaborationSynchronizer?.destroy();
 
@@ -148,6 +170,10 @@ export class SyncService {
   }
 
   private async initRootSynchronizers(rootId: string): Promise<void> {
+    if (this.isLocalOnly || !this.syncHandlers) {
+      return;
+    }
+
     if (this.rootSynchronizers.has(rootId)) {
       return;
     }

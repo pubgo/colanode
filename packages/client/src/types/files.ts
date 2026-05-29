@@ -31,17 +31,6 @@ export type LocalFile = {
   downloadErrorMessage: string | null;
 };
 
-export type Upload = {
-  fileId: string;
-  status: UploadStatus;
-  progress: number;
-  retries: number;
-  createdAt: string;
-  completedAt: string | null;
-  errorCode: string | null;
-  errorMessage: string | null;
-};
-
 export type Download = {
   id: string;
   fileId: string;

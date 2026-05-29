@@ -19,7 +19,6 @@ import { DownloadListQueryHandler } from './files/download-list';
 import { FileDownloadRequestGetQueryHandler } from './files/file-download-request-get';
 import { LocalFileGetQueryHandler } from './files/local-file-get';
 import { TempFileListQueryHandler } from './files/temp-file-list';
-import { UploadListQueryHandler } from './files/upload-list';
 import { IconCategoryListQueryHandler } from './icons/icon-category-list';
 import { IconListQueryHandler } from './icons/icon-list';
 import { IconSearchQueryHandler } from './icons/icon-search';
@@ -29,7 +28,6 @@ import { NodeListQueryHandler } from './nodes/node-list';
 import { NodeReactionsListQueryHandler } from './nodes/node-reaction-list';
 import { RecordFieldValueCountQueryHandler } from './records/record-field-value-count';
 import { RecordSearchQueryHandler } from './records/record-search';
-import { ServerListQueryHandler } from './servers/server-list';
 import { UserListQueryHandler } from './users/user-list';
 import { UserSearchQueryHandler } from './users/user-search';
 import { WorkspaceListQueryHandler } from './workspaces/workspace-list';
@@ -64,12 +62,10 @@ export const buildQueryHandlerMap = (app: AppService): QueryHandlerMap => {
     'document.get': new DocumentGetQueryHandler(app),
     'document.state.get': new DocumentStateGetQueryHandler(app),
     'document.updates.list': new DocumentUpdatesListQueryHandler(app),
-    'upload.list': new UploadListQueryHandler(app),
     'download.list': new DownloadListQueryHandler(app),
     'temp.file.list': new TempFileListQueryHandler(app),
     'icon.svg.get': new IconSvgGetQueryHandler(app),
     'emoji.svg.get': new EmojiSvgGetQueryHandler(app),
     'tabs.list': new TabsListQueryHandler(app),
-    'server.list': new ServerListQueryHandler(app),
   };
 };

@@ -27,6 +27,9 @@ export interface ColanodeWindowApi {
   showFileSaveDialog: (
     options: SaveDialogOptions
   ) => Promise<string | undefined>;
+  getStorageDirectory: () => Promise<string | undefined>;
+  showStorageDirectoryDialog: () => Promise<string | undefined>;
+  setStorageDirectory: (path: string) => Promise<void>;
 }
 
 declare global {

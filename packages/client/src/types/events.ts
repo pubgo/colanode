@@ -8,7 +8,6 @@ import {
 } from '@colanode/client/types/documents';
 import {
   LocalFile,
-  Upload,
   Download,
   TempFile,
 } from '@colanode/client/types/files';
@@ -19,10 +18,8 @@ import {
   NodeReaction,
   NodeReference,
 } from '@colanode/client/types/nodes';
-import { Server } from '@colanode/client/types/servers';
 import { User } from '@colanode/client/types/users';
 import { Workspace } from '@colanode/client/types/workspaces';
-import { Message } from '@colanode/core';
 
 export type WorkspaceEventData = {
   workspaceId: string;
@@ -102,24 +99,6 @@ export type LocalFileDeletedEvent = {
   localFile: LocalFile;
 };
 
-export type UploadCreatedEvent = {
-  type: 'upload.created';
-  workspace: WorkspaceEventData;
-  upload: Upload;
-};
-
-export type UploadUpdatedEvent = {
-  type: 'upload.updated';
-  workspace: WorkspaceEventData;
-  upload: Upload;
-};
-
-export type UploadDeletedEvent = {
-  type: 'upload.deleted';
-  workspace: WorkspaceEventData;
-  upload: Upload;
-};
-
 export type DownloadCreatedEvent = {
   type: 'download.created';
   workspace: WorkspaceEventData;
@@ -168,27 +147,6 @@ export type WorkspaceDeletedEvent = {
   workspace: Workspace;
 };
 
-export type ServerCreatedEvent = {
-  type: 'server.created';
-  server: Server;
-};
-
-export type ServerUpdatedEvent = {
-  type: 'server.updated';
-  server: Server;
-};
-
-export type ServerDeletedEvent = {
-  type: 'server.deleted';
-  server: Server;
-};
-
-export type ServerAvailabilityChangedEvent = {
-  type: 'server.availability.changed';
-  domain: string;
-  isAvailable: boolean;
-};
-
 export type QueryResultUpdatedEvent = {
   type: 'query.result.updated';
   id: string;
@@ -209,22 +167,6 @@ export type CollaborationDeletedEvent = {
   type: 'collaboration.deleted';
   workspace: WorkspaceEventData;
   nodeId: string;
-};
-
-export type AccountConnectionOpenedEvent = {
-  type: 'account.connection.opened';
-  accountId: string;
-};
-
-export type AccountConnectionClosedEvent = {
-  type: 'account.connection.closed';
-  accountId: string;
-};
-
-export type AccountConnectionMessageReceivedEvent = {
-  type: 'account.connection.message.received';
-  accountId: string;
-  message: Message;
 };
 
 export type MetadataUpdatedEvent = {
@@ -343,16 +285,9 @@ export type Event =
   | WorkspaceCreatedEvent
   | WorkspaceUpdatedEvent
   | WorkspaceDeletedEvent
-  | ServerCreatedEvent
-  | ServerUpdatedEvent
-  | ServerDeletedEvent
-  | ServerAvailabilityChangedEvent
   | LocalFileCreatedEvent
   | LocalFileUpdatedEvent
   | LocalFileDeletedEvent
-  | UploadCreatedEvent
-  | UploadUpdatedEvent
-  | UploadDeletedEvent
   | DownloadCreatedEvent
   | DownloadUpdatedEvent
   | DownloadDeletedEvent
@@ -360,9 +295,6 @@ export type Event =
   | RadarDataUpdatedEvent
   | CollaborationCreatedEvent
   | CollaborationDeletedEvent
-  | AccountConnectionOpenedEvent
-  | AccountConnectionClosedEvent
-  | AccountConnectionMessageReceivedEvent
   | MetadataUpdatedEvent
   | MetadataDeletedEvent
   | DocumentUpdatedEvent

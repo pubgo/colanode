@@ -57,6 +57,11 @@ const initializeApp = async () => {
       // No-op on web
     },
     showFileSaveDialog: async () => undefined,
+    getStorageDirectory: async () => undefined,
+    showStorageDirectoryDialog: async () => undefined,
+    setStorageDirectory: async () => {
+      // No-op on web
+    },
   };
 
   window.eventBus = eventBus;

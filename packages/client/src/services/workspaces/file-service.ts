@@ -9,7 +9,6 @@ import {
   mapDownload,
   mapLocalFile,
   mapNode,
-  mapUpload,
 } from '@colanode/client/lib/mappers';
 import { fetchNode } from '@colanode/client/lib/utils';
 import { MutationError, MutationErrorCode } from '@colanode/client/mutations';
@@ -18,7 +17,6 @@ import { WorkspaceService } from '@colanode/client/services/workspaces/workspace
 import {
   DownloadStatus,
   LocalFile,
-  UploadStatus,
 } from '@colanode/client/types/files';
 import { LocalFileNode } from '@colanode/client/types/nodes';
 import {
@@ -89,7 +87,7 @@ export class FileService {
         throw new MutationError(
           MutationErrorCode.FileTooLarge,
           'The file you are trying to upload is too large. The maximum file size is ' +
-            formatBytes(maxFileSize)
+          formatBytes(maxFileSize)
         );
       }
     }
@@ -116,11 +114,11 @@ export class FileService {
       extension: tempFile.extension,
       mimeType: tempFile.mime_type,
       size: tempFile.size,
-      status: FileStatus.Pending,
+      status: this.app.meta.localOnly ? FileStatus.Ready : FileStatus.Pending,
       version: generateId(IdType.Version),
     };
 
-    const createdNode = await this.workspace.nodes.createNode({
+    await this.workspace.nodes.createNode({
       id: fileId,
       attributes: attributes,
       parentId: parentId,
@@ -151,25 +149,6 @@ export class FileService {
       );
     }
 
-    const createdUpload = await this.workspace.database
-      .insertInto('uploads')
-      .returningAll()
-      .values({
-        file_id: fileId,
-        status: UploadStatus.Pending,
-        retries: 0,
-        created_at: createdNode.created_at,
-        progress: 0,
-      })
-      .executeTakeFirst();
-
-    if (!createdUpload) {
-      throw new MutationError(
-        MutationErrorCode.FileCreateFailed,
-        'Failed to create upload'
-      );
-    }
-
     await this.app.database
       .deleteFrom('temp_files')
       .where('id', '=', tempFileId)
@@ -186,26 +165,6 @@ export class FileService {
       localFile: mapLocalFile(createdLocalFile, url),
     });
 
-    eventBus.publish({
-      type: 'upload.created',
-      workspace: {
-        workspaceId: this.workspace.workspaceId,
-        userId: this.workspace.userId,
-        accountId: this.workspace.accountId,
-      },
-      upload: mapUpload(createdUpload),
-    });
-
-    this.app.jobs.addJob(
-      {
-        type: 'file.upload',
-        userId: this.workspace.userId,
-        fileId: fileId,
-      },
-      {
-        delay: ms('2 seconds'),
-      }
-    );
   }
 
   public async deleteFile(node: SelectNode): Promise<void> {
@@ -253,6 +212,13 @@ export class FileService {
 
     const file = mapNode(node) as LocalFileNode;
     const now = new Date().toISOString();
+    const localPath = this.buildFilePath(fileId, file.extension);
+
+    const localExists = await this.app.fs.exists(localPath);
+    if (!localExists) {
+      return null;
+    }
+
     const createdLocalFile = await this.workspace.database
       .insertInto('local_files')
       .returningAll()
@@ -260,11 +226,11 @@ export class FileService {
         id: fileId,
         version: file.version,
         created_at: now,
-        path: this.buildFilePath(fileId, file.extension),
+        path: localPath,
         opened_at: now,
-        download_status: DownloadStatus.Pending,
-        download_progress: 0,
-        download_completed_at: null,
+        download_status: DownloadStatus.Completed,
+        download_progress: 100,
+        download_completed_at: now,
         download_error_code: null,
         download_error_message: null,
         download_retries: 0,
@@ -276,13 +242,8 @@ export class FileService {
       return null;
     }
 
-    await this.app.jobs.addJob({
-      type: 'local.file.download',
-      userId: this.workspace.userId,
-      fileId: fileId,
-    });
-
-    const localFile = mapLocalFile(createdLocalFile, null);
+    const url = await this.app.fs.url(createdLocalFile.path);
+    const localFile = mapLocalFile(createdLocalFile, url);
     eventBus.publish({
       type: 'local.file.created',
       workspace: {
@@ -412,6 +373,10 @@ export class FileService {
   }
 
   private async cleanUnopenedFiles(): Promise<void> {
+    if (this.app.meta.localOnly) {
+      return;
+    }
+
     debug(
       `Cleaning unopened files for workspace ${this.workspace.workspaceId}`
     );

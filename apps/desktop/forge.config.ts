@@ -8,15 +8,47 @@ import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 
+const isLocalOnly = process.env.LOCAL_ONLY === 'true';
+const hasMacSigningEnv =
+  !!process.env.KEYCHAIN &&
+  !!process.env.APPLE_ID &&
+  !!process.env.APPLE_ID_PASSWORD &&
+  !!process.env.APPLE_TEAM_ID;
+const hasWindowsSigningEnv =
+  !!process.env.CERTIFICATE_PATH && !!process.env.CERTIFICATE_PASSWORD;
+const githubRepository = process.env.GITHUB_REPOSITORY?.trim();
+const [githubOwner, githubRepo] = githubRepository?.split('/') ?? [];
+const releaseOwner = githubOwner || 'colanode';
+const releaseRepo = githubRepo || 'colanode';
+
 const config: ForgeConfig = {
   packagerConfig: {
     name: 'Colanode',
     executableName: process.platform === 'linux' ? 'colanode' : 'Colanode',
     icon: 'assets/colanode-logo',
     appBundleId: 'com.colanode.desktop',
-    ...(process.platform === 'win32' && {
+    ...(process.platform === 'win32' && hasWindowsSigningEnv && {
       certificateFile: process.env.CERTIFICATE_PATH,
       certificatePassword: process.env.CERTIFICATE_PASSWORD,
+    }),
+    ...(process.platform === 'darwin' && !isLocalOnly && hasMacSigningEnv && {
+      osxSign: {
+        type: 'distribution',
+        keychain: process.env.KEYCHAIN!,
+        optionsForFile: (_) => {
+          return {
+            hardenedRuntime: true,
+            entitlements: 'entitlements.mac.plist',
+            entitlementsInherit: 'entitlements.mac.plist',
+          };
+        },
+      },
+      osxNotarize: {
+        appleId: process.env.APPLE_ID!,
+        appleIdPassword: process.env.APPLE_ID_PASSWORD!,
+        teamId: process.env.APPLE_TEAM_ID!,
+        keychain: process.env.KEYCHAIN!,
+      },
     }),
     asar: true,
     prune: true,
@@ -49,29 +81,12 @@ const config: ForgeConfig = {
       return true;
     },
     extraResource: ['assets'],
-    osxSign: {
-      type: 'distribution',
-      keychain: process.env.KEYCHAIN!,
-      optionsForFile: (_) => {
-        return {
-          hardenedRuntime: true,
-          entitlements: 'entitlements.mac.plist',
-          entitlementsInherit: 'entitlements.mac.plist',
-        };
-      },
-    },
-    osxNotarize: {
-      appleId: process.env.APPLE_ID!,
-      appleIdPassword: process.env.APPLE_ID_PASSWORD!,
-      teamId: process.env.APPLE_TEAM_ID!,
-      keychain: process.env.KEYCHAIN!,
-    },
   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
       name: 'Colanode',
-      ...(process.platform === 'win32' && {
+      ...(process.platform === 'win32' && hasWindowsSigningEnv && {
         certificateFile: process.env.CERTIFICATE_PATH,
         certificatePassword: process.env.CERTIFICATE_PASSWORD,
       }),
@@ -91,8 +106,8 @@ const config: ForgeConfig = {
       name: '@electron-forge/publisher-github',
       config: {
         repository: {
-          owner: 'colanode',
-          name: 'colanode',
+          owner: releaseOwner,
+          name: releaseRepo,
         },
         prerelease: false,
         draft: true,
@@ -147,22 +162,40 @@ const config: ForgeConfig = {
       const srcNodeModules = '../../node_modules';
       const destNodeModules = './node_modules';
 
+      let canPrepareNodeModules = true;
+
       // First clear the node_modules directory
-      await fs.rm(destNodeModules, {
-        recursive: true,
-        force: true,
-        maxRetries: 3,
-        retryDelay: 1000,
-      });
+      try {
+        await fs.rm(destNodeModules, {
+          recursive: true,
+          force: true,
+          maxRetries: 3,
+          retryDelay: 1000,
+        });
+      } catch (error) {
+        const err = error as NodeJS.ErrnoException;
+        if (err.code === 'EACCES' || err.code === 'EPERM') {
+          // In local environments, desktop/node_modules can be root-owned due to previous sudo commands.
+          // In that case we keep the existing directory as-is and proceed with packaging.
+          console.warn(
+            `[forge prePackage] Unable to remove ${destNodeModules} due to permissions (${err.code}); using existing node_modules.`
+          );
+          canPrepareNodeModules = false;
+        } else {
+          throw error;
+        }
+      }
 
-      // Ensure the destination directory exists
-      await fs.mkdir(destNodeModules, { recursive: true });
+      if (canPrepareNodeModules) {
+        // Ensure the destination directory exists
+        await fs.mkdir(destNodeModules, { recursive: true });
 
-      // Copy the entire node_modules directory recursively
-      await fs.cp(srcNodeModules, destNodeModules, {
-        recursive: true,
-        force: true,
-      });
+        // Copy the entire node_modules directory recursively
+        await fs.cp(srcNodeModules, destNodeModules, {
+          recursive: true,
+          force: true,
+        });
+      }
     },
     postPackage: async () => {
       // Remove the node_modules directory
