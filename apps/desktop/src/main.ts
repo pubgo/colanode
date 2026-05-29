@@ -47,6 +47,7 @@ const LOCAL_ACCOUNT_NAME = 'Local User';
 const LOCAL_WORKSPACE_NAME = 'My Workspace';
 const STORAGE_DIR_ARG_PREFIX = '--colanode-storage-dir=';
 const STORAGE_CONFIG_FILE = 'storage-config.json';
+const STORAGE_ROOT_DIR_NAME = 'Colanode-Local';
 const STORAGE_DIR_ENV_KEYS = [
   'COLANODE_STORAGE_DIR',
   'COLANODE_REPO_DIR',
@@ -59,8 +60,47 @@ const toAbsoluteStoragePath = (value: string): string => {
   return path.isAbsolute(value) ? value : path.resolve(process.cwd(), value);
 };
 
+const resolveSudoUserHomePath = (): string | null => {
+  if (process.platform !== 'darwin') {
+    return null;
+  }
+
+  if (typeof process.getuid !== 'function' || process.getuid() !== 0) {
+    return null;
+  }
+
+  const sudoUser = process.env.SUDO_USER?.trim();
+  if (!sudoUser) {
+    return null;
+  }
+
+  const homePath = path.join('/Users', sudoUser);
+  if (!fs.existsSync(homePath)) {
+    return null;
+  }
+
+  return homePath;
+};
+
+const resolvePreferredAppDataPath = (): string => {
+  const sudoUserHomePath = resolveSudoUserHomePath();
+  if (!sudoUserHomePath) {
+    return electronApp.getPath('appData');
+  }
+
+  return path.join(sudoUserHomePath, 'Library', 'Application Support');
+};
+
+const resolveDefaultStoragePath = (): string => {
+  return path.join(resolvePreferredAppDataPath(), STORAGE_ROOT_DIR_NAME);
+};
+
 const storageConfigPath = (): string => {
-  return path.join(electronApp.getPath('appData'), 'Colanode', STORAGE_CONFIG_FILE);
+  return path.join(
+    resolvePreferredAppDataPath(),
+    STORAGE_ROOT_DIR_NAME,
+    STORAGE_CONFIG_FILE
+  );
 };
 
 const readPersistedStoragePath = (): string | null => {
@@ -118,14 +158,18 @@ const resolveConfiguredStoragePath = (): string | null => {
 
 const configureStoragePath = (): void => {
   const configuredPath = resolveConfiguredStoragePath();
-  if (!configuredPath) {
-    return;
-  }
+  const defaultStoragePath = resolveDefaultStoragePath();
+  const finalPath = configuredPath ?? defaultStoragePath;
 
   try {
-    fs.mkdirSync(configuredPath, { recursive: true });
-    electronApp.setPath('userData', configuredPath);
-    debug(`Using custom storage directory: ${configuredPath}`);
+    fs.mkdirSync(finalPath, { recursive: true });
+    electronApp.setPath('userData', finalPath);
+
+    if (configuredPath) {
+      debug(`Using custom storage directory: ${finalPath}`);
+    } else {
+      debug(`Using default storage directory for sudo session: ${finalPath}`);
+    }
   } catch (error) {
     console.error('Failed to configure custom storage directory:', error);
   }
